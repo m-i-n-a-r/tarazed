@@ -1,11 +1,18 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
 <link rel="stylesheet" type="text/css" href="tarazed.css">
+<link href="https://unpkg.com/event-drops/dist/style.css" rel="stylesheet" />
 <script src="https://d3js.org/d3.v4.min.js"></script>
+<!-- <script src="https://unpkg.com/d3"></script> TODO Redundant? -->
+<script src="https://unpkg.com/event-drops"></script>
 
 <body>
-    <div id="tarazed1">
-    </div>
+    <h1>Tarazed</h1>
+    <p class="infos">
+        <span id="numberCommits"></span> launches <span class="light">found between</span><br/>
+        <span id="zoomStart"></span> <span class="light">and</span> <span id="zoomEnd"></span>
+    </p>
+    <div id="tarazed1"></div>
 </body>
 
 <script src="tarazed.js"></script>

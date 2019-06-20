@@ -3,8 +3,8 @@
 
 // Some useful variables, all in the same place to simplify the configuration
 var idToSelect = ["#tarazed1"];
-var width = 960;
-var height = 450;
+var width = 1600;
+var height = 900;
 var iterations = 1;
 var limit = 3000; // Takes up to this number of launches
 var baseUrl = "https://launchlibrary.net/1.4/launch?startdate=1950-01-01";
@@ -38,7 +38,8 @@ function processLaunches(json) {
         .attr("ry", 0)
         .attr("height", height)
         .attr("width", width)
-        .attr("opacity", 1)
+        .attr("opacity", 0.1)
         .style("fill", graphBgColor);
 
+    
 }
