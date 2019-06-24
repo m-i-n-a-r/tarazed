@@ -1,1 +1,24 @@
 /* Other useful styles */
+
+* {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-size: 16px;
+    color: #222;
+    background: #eee;
+    padding: 0 3rem 1rem 3rem;
+    font-family: 'Ubuntu', sans-serif;
+}
+
+h1 {
+    text-align: center;
+    margin: 1.5rem auto 1rem;
+    font-family: 'Ubuntu', sans-serif;
+    font-weight: normal;
+    font-size: 3rem;
+    color: #aaa;
+}
+
