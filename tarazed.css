@@ -22,3 +22,13 @@ h1 {
     color: #aaa;
 }
 
+.line {
+    fill: none;
+    stroke: #ff0000;
+    stroke-width: 4px;
+  }
+  
+  .area {
+    fill: #ff9999;
+  }
+
