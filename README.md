@@ -6,9 +6,9 @@
 Tarazed takes every **space launch** in history from [Launchlibrary](https://launchlibrary.net) and displays a visual representation using **d3js**, **javascript** and other libraries. This kind of visualization should be easy to embed in another web page (an example wrapper is included). 
 
 ## Task
-> How can a user understand the progression behind each space agency and the overall evolution of the space travel phenomenon?
+> How can a user understand the progression behind the overall evolution of the space travel phenomenon?
 
-The specific task is to display the history of the space travels from 1961 until the last scheduled launch in a clear and easy to understand representation. The user can see the progress of each agency on a time based graph, interacting with the graph to highlight or aggregate data.
+The specific task is to display the history of the space travels from 1961 until the last scheduled launch in a clear and easy to understand representation. The user can see the progress on a time based graph, interacting with the graph to highlight or filter.
 Approximately, there are **2000 launches**, **250 agencies** and a time window of **60 years** (at the time of writing).
 
 ## Features

@@ -121,7 +121,7 @@ var drawChartAggregate = function (data) {
 
     // Scale the range of the data
     x.domain(d3.extent(data, function (d) { return d.key; }));
-    y.domain([0, d3.max(data, function (d) { return d.value; }) + 3]); // max number of launches per year + 3
+    y.domain([0, d3.max(data, function (d) { return d.value; }) + 10]); // max number of launches per year + 3
 
     // Add the area
     svg.append("path")
@@ -145,3 +145,17 @@ var drawChartAggregate = function (data) {
         .attr("transform", "translate(" + marginSingle + "," + 0 + ")")
         .call(d3.axisLeft(y));
 }
+
+// Update the data when the user selects a different radio button
+function updateData() {
+    var modes = document.getElementById("modes")
+    var mode;
+        for(var i = 0; i < modes.length; i++) {
+            if(form[i].checked) {
+            mode = form[i].id;
+            }
+        }
+}
+
+var dataDim = d3.select("#modes")
+	dataDim.on("change", updateData)
