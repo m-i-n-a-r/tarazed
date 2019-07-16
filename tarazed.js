@@ -12,7 +12,7 @@ var loadingColor = "#aaaaaa";
 var loadingText = "...fetching results...";
 var spinnerRadius = 50;
 var limit = 3000; // Takes up to this number of launches
-var baseUrl = "https://launchlibrary.net/1.4/launch?mode=list"; // Verbose, list or summary
+var baseUrl = "https://launchlibrary.net/1.4/launch?mode=verbose"; // Verbose, list or summary
 var finalPageUrl = baseUrl + "&limit=" + limit;
 var graphBgColor = "#000000"
 
@@ -65,19 +65,42 @@ function transitionFunction(path) {
 
 // Get a gigantic json containing every launch in history
 d3.json(finalPageUrl, json => {
-    // Aggregate data
-    const aggregatedData = aggregateData(json);
-    drawChartAggregate(aggregatedData);
+    // Prepare the data
+    const monthlyAggregatedData = monthlyAggregateData(json);
+    const yearlyAggregatedData = yearlyAggregateData(json);
+    const countryAggregatedData = countryAggregateData(json);
+    console.log(countryAggregatedData);
+    drawChartAggregate(yearlyAggregatedData);
 });
 
-var aggregateData = function (data) {
+function monthlyAggregateData(data) {
     const launches = data.launches;
-    // Aggregate data
-    aggregate = d3.nest()
-        .key(function (d) { return parseInt(d.windowstart.substring(0, 4)); })
+    // Aggregate data by month
+    monthlyAggregate = d3.nest()
+        .key(function (d) { return parseInt(d.isostart.substring(0, 6)); })
         .rollup(function (v) { return v.length; })
         .entries(launches);
-    return aggregate;
+    return monthlyAggregate;
+}
+
+function yearlyAggregateData(data) {
+    const launches = data.launches;
+    // Aggregate data by year
+    yearlyAggregate = d3.nest()
+        .key(function (d) { return parseInt(d.isostart.substring(0, 4)); })
+        .rollup(function (v) { return v.length; })
+        .entries(launches);
+    return yearlyAggregate;
+}
+
+function countryAggregateData(data) {
+    const launches = data.launches;
+    // Aggregate data by country
+    countryAggregate = d3.nest()
+        .key(function (d) { return d.location.countryCode; })
+        .rollup(function (v) { return v.length; })
+        .entries(launches);
+    return countryAggregate;
 }
 
 var drawChartAggregate = function (data) {
@@ -151,8 +174,8 @@ function updateData() {
     var modes = document.getElementById("modes")
     var mode;
         for(var i = 0; i < modes.length; i++) {
-            if(form[i].checked) {
-            mode = form[i].id;
+            if(modes[i].checked) {
+            mode = modes[i].id;
             }
         }
 }
