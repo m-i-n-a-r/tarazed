@@ -19,6 +19,7 @@ var spinnerRadius = 50;
 var limit = 3000; // Takes up to this number of launches
 var baseUrl = "https://launchlibrary.net/1.4/launch?mode=verbose"; // Verbose, list or summary
 var finalPageUrl = baseUrl + "&limit=" + limit;
+var futureGray = "rgba(160, 160, 160, 0.6)";
 
 // The main container, it should scale to fit the screen div size
 var svg = d3.select(idToSelect[0]).append("svg")
@@ -74,7 +75,7 @@ d3.json(finalPageUrl, json => {
     const yearlyAggregatedData = yearlyAggregateData(json);
     const decadeAggregatedData = decadeAggregateData(json);
     const countryAggregatedData = countryAggregateData(json);
-    drawChartAggregate(yearlyAggregatedData);
+    drawChartAggregate(decadeAggregatedData);
 });
 
 // Data aggregation functions
@@ -138,15 +139,38 @@ function drawChartAggregate(data) {
     x.domain(data.map(function(d) { return d.key; }));
     y.domain([0, d3.max(data, function(d) { return d.value; })]);
 
-    // append the rectangles for the bar chart
+    // Append the rectangles for the bar chart (animation and color gradient)
     svg.selectAll(".bar")
         .data(data)
-        .enter().append("rect")
-        .attr("class", "bar")
+        .enter()
+        .append("rect")
+        .attr("class", "bar") // Assign the color dinamically from 140,35,135 to 240,115,35 (delta +100,+80,-100)
+        .attr("fill", function (d, i) {
+            let columnsNumber = Object.keys(data).length
+            let normalizer = columnsNumber / 100
+            console.log(normalizer)
+            if(parseInt(d.key.substring(0, 4)) > new Date().getFullYear()) return futureGray 
+            else return 'rgb(' + (140 + i / normalizer) + ', ' + (35 + (i * 0.8 / normalizer)) 
+            + ', ' + (135 - (i / normalizer)) + ')' 
+        })
         .attr("x", function(d) { return x(d.key); })
         .attr("width", x.bandwidth())
+        .attr("y", height)
+        .attr("height", 0)
+		.transition("bar spawning")
+		.duration(250)
+        .delay(function (d, i) { return i * 50;	})
         .attr("y", function(d) { return y(d.value); })
-        .attr("height", function(d) { return height - y(d.value); });
+		.attr("height", function (d, i) { return height - y(d.value); });
+
+    // Add the x Axis
+    svg.append("g")
+        .attr("transform", "translate(0," + height + ")")
+        .call(d3.axisBottom(x));
+
+    // Add the y Axis
+    svg.append("g")
+        .call(d3.axisLeft(y));
 
 }
 
