@@ -5,9 +5,9 @@ const firstLaunchYear = 1961;
 
 // Some useful variables, all in the same place to simplify the configuration
 var idToSelect = ["#tarazed1"];
-var width = 1800;
-var height = 600;
-var marginSingle = 30;
+var margin = {top: 20, right: 20, bottom: 30, left: 40},
+    width = 1800 - margin.left - margin.right,
+    height = 600 - margin.top - margin.bottom;
 var loadingColor = "#aaaaaa";
 var loadingText = "...fetching results...";
 var spinnerRadius = 50;
@@ -68,11 +68,12 @@ d3.json(finalPageUrl, json => {
     // Prepare the data
     const monthlyAggregatedData = monthlyAggregateData(json);
     const yearlyAggregatedData = yearlyAggregateData(json);
+    const decadeAggregatedData = decadeAggregateData(json);
     const countryAggregatedData = countryAggregateData(json);
-    console.log(countryAggregatedData);
     drawChartAggregate(yearlyAggregatedData);
 });
 
+// Data aggregation functions
 function monthlyAggregateData(data) {
     const launches = data.launches;
     // Aggregate data by month
@@ -93,6 +94,16 @@ function yearlyAggregateData(data) {
     return yearlyAggregate;
 }
 
+function decadeAggregateData(data) {
+    const launches = data.launches;
+    // Aggregate data by decade
+    decadeAggregate = d3.nest()
+        .key(function (d) { return parseInt(d.isostart.substring(0, 3) + "0"); })
+        .rollup(function (v) { return v.length; })
+        .entries(launches);
+    return decadeAggregate;
+}
+
 function countryAggregateData(data) {
     const launches = data.launches;
     // Aggregate data by country
@@ -103,7 +114,8 @@ function countryAggregateData(data) {
     return countryAggregate;
 }
 
-var drawChartAggregate = function (data) {
+// Draw a barchart depending on the aggregation choice
+function drawChartAggregate(data) {
     // Remove the "loading" text
     d3.select("#loadingtext").transition("removeLoadingText")
         .duration(500)
@@ -114,59 +126,7 @@ var drawChartAggregate = function (data) {
         .attr("opacity", 0)
         .remove();
 
-    // Parse the date
-    var parseTime = d3.timeParse("%Y");
-
-    // Set the ranges
-    var x = d3.scaleTime().range([marginSingle, width - marginSingle]);
-    var y = d3.scaleLinear().range([height - 2 * marginSingle, 0]);
-
-    // Define the area
-    var area = d3.area()
-        .x(function (d) { return x(d.key); })
-        .y0(height - marginSingle)
-        .y1(function (d) { return y(d.value); });
-
-    // Define the line
-    var valueline = d3.line()
-        .x(function (d) { return x(d.key); })
-        .y(function (d) { return y(d.value); });
-
-    // Move the 'group' element to the top left margin
-    svg.append("g")
-        //.attr("transform", "translate(" + marginSingle + "," + marginSingle + ")");
-
-    // Format the data
-    data.forEach(function (d) {
-        d.key = parseTime(d.key);
-        d.value = +d.value;
-    });
-
-    // Scale the range of the data
-    x.domain(d3.extent(data, function (d) { return d.key; }));
-    y.domain([0, d3.max(data, function (d) { return d.value; }) + 10]); // max number of launches per year + 3
-
-    // Add the area
-    svg.append("path")
-        .data([data])
-        .attr("class", "area")
-        .attr("d", area);
-
-    // Add the valueline path.
-    svg.append("path")
-        .data([data])
-        .attr("class", "line")
-        .attr("d", valueline);
-
-    // Add the X Axis
-    svg.append("g")
-        .attr("transform", "translate(0," + (height - marginSingle) + ")")
-        .call(d3.axisBottom(x));
-
-    // Add the Y Axis
-    svg.append("g")
-        .attr("transform", "translate(" + marginSingle + "," + 0 + ")")
-        .call(d3.axisLeft(y));
+    
 }
 
 // Update the data when the user selects a different radio button
