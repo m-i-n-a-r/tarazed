@@ -20,6 +20,7 @@ var limit = 3000; // Takes up to this number of launches
 var baseUrl = "https://launchlibrary.net/1.4/launch?mode=verbose"; // Verbose, list or summary
 var finalPageUrl = baseUrl + "&limit=" + limit;
 var futureGray = "rgba(160, 160, 160, 0.6)";
+var storedData;
 
 // The main container, it should scale to fit the screen div size
 var svg = d3.select(idToSelect[0]).append("svg")
@@ -69,13 +70,18 @@ function transitionFunction(path) {
 }
 
 // Get a gigantic json containing every launch in history
-d3.json(finalPageUrl, json => {
-    // Prepare the data
-    const monthlyAggregatedData = monthlyAggregateData(json);
-    const yearlyAggregatedData = yearlyAggregateData(json);
-    const decadeAggregatedData = decadeAggregateData(json);
-    const countryAggregatedData = countryAggregateData(json);
-    drawChartAggregate(decadeAggregatedData);
+d3.json(finalPageUrl, json => {    
+    // Remove the "loading" text
+    d3.select("#loadingtext").transition("removeLoadingText")
+        .duration(500)
+        .attr("opacity", 0)
+        .remove();
+    d3.select("#spinner").transition("removeLoadingSpinner")
+        .duration(500)
+        .attr("opacity", 0)
+        .remove();
+
+    storeData(json);
 });
 
 // Data aggregation functions
@@ -121,17 +127,6 @@ function countryAggregateData(data) {
 
 // Draw a barchart depending on the aggregation choice
 function drawChartAggregate(data) {
-
-    // Remove the "loading" text
-    d3.select("#loadingtext").transition("removeLoadingText")
-        .duration(500)
-        .attr("opacity", 0)
-        .remove();
-    d3.select("#spinner").transition("removeLoadingSpinner")
-        .duration(500)
-        .attr("opacity", 0)
-        .remove();
-
     svg.append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
@@ -148,7 +143,6 @@ function drawChartAggregate(data) {
         .attr("fill", function (d, i) {
             let columnsNumber = Object.keys(data).length
             let normalizer = columnsNumber / 100
-            console.log(normalizer)
             if(parseInt(d.key.substring(0, 4)) > new Date().getFullYear()) return futureGray 
             else return 'rgb(' + (140 + i / normalizer) + ', ' + (35 + (i * 0.8 / normalizer)) 
             + ', ' + (135 - (i / normalizer)) + ')' 
@@ -165,14 +159,24 @@ function drawChartAggregate(data) {
 
     // Add the x Axis
     svg.append("g")
-        .attr("transform", "translate(0," + height + ")")
+        .attr("transform", "translate(" + 0 + "," + (height) + ")")
         .call(d3.axisBottom(x));
 
     // Add the y Axis
     svg.append("g")
+        .attr("transform", "translate(" + 0 + "," + 0 + ")")
         .call(d3.axisLeft(y));
 
 }
+
+function storeData(data) {
+    storedData = data;
+    const yearlyAggregatedData = yearlyAggregateData(data);
+    drawChartAggregate(yearlyAggregatedData)
+}
+
+    var dataDim = d3.select("#modes")
+        dataDim.on("change", updateData)
 
 // Update the data when the user selects a different radio button
 function updateData() {
@@ -181,9 +185,18 @@ function updateData() {
         for(var i = 0; i < modes.length; i++) {
             if(modes[i].checked) {
             mode = modes[i].id;
+            if(mode == "decade") {
+                const decadeAggregatedData = decadeAggregateData(storedData);
+                drawChartAggregate(decadeAggregatedData)
+            }
+            if(mode == "year") { 
+                const yearlyAggregatedData = yearlyAggregateData(storeData);
+                drawChartAggregate(yearlyAggregatedData)
+            }
+            if(mode == "month") {
+                const monthlyAggregatedData = monthlyAggregateData(storedData);
+                drawChartAggregate(monthlyAggregatedData)
             }
         }
+    }
 }
-
-var dataDim = d3.select("#modes")
-	dataDim.on("change", updateData)

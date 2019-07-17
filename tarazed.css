@@ -1,10 +1,5 @@
 /* Other useful styles */
 
-* {
-    margin: 0;
-    padding: 0;
-}
-
 body {
     font-size: 16px;
     color: #222;
@@ -23,12 +18,12 @@ h1 {
 }
 
 .axis text {
-    font: 10px sans-serif;
+    font: 14px sans-serif;
   }
   .axis path,
   .axis line {
     fill: none;
-    stroke: #000;
+    stroke: #aaa;
     shape-rendering: crispEdges;
   }
 
