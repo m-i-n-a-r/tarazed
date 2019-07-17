@@ -8,18 +8,22 @@ var idToSelect = ["#tarazed1"];
 var margin = {top: 20, right: 20, bottom: 30, left: 40},
     width = 1800 - margin.left - margin.right,
     height = 600 - margin.top - margin.bottom;
+var x = d3.scaleBand()
+          .range([0, width])
+          .padding(0.1);
+var y = d3.scaleLinear()
+          .range([height, 0]);
 var loadingColor = "#aaaaaa";
 var loadingText = "...fetching results...";
 var spinnerRadius = 50;
 var limit = 3000; // Takes up to this number of launches
 var baseUrl = "https://launchlibrary.net/1.4/launch?mode=verbose"; // Verbose, list or summary
 var finalPageUrl = baseUrl + "&limit=" + limit;
-var graphBgColor = "#000000"
 
 // The main container, it should scale to fit the screen div size
 var svg = d3.select(idToSelect[0]).append("svg")
     .attr("preserveAspectRatio", "xMinYMin meet")
-    .attr("viewBox", "0 0 " + width + " " + height);
+    .attr("viewBox", "0 0 " + (width + margin.left + margin.right) + " " + (height + margin.top + margin.bottom))
 
 // A loading text
 svg.append("text")
@@ -116,6 +120,7 @@ function countryAggregateData(data) {
 
 // Draw a barchart depending on the aggregation choice
 function drawChartAggregate(data) {
+
     // Remove the "loading" text
     d3.select("#loadingtext").transition("removeLoadingText")
         .duration(500)
@@ -126,7 +131,23 @@ function drawChartAggregate(data) {
         .attr("opacity", 0)
         .remove();
 
-    
+    svg.append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    // Scale the range of the data in the domains
+    x.domain(data.map(function(d) { return d.key; }));
+    y.domain([0, d3.max(data, function(d) { return d.value; })]);
+
+    // append the rectangles for the bar chart
+    svg.selectAll(".bar")
+        .data(data)
+        .enter().append("rect")
+        .attr("class", "bar")
+        .attr("x", function(d) { return x(d.key); })
+        .attr("width", x.bandwidth())
+        .attr("y", function(d) { return y(d.value); })
+        .attr("height", function(d) { return height - y(d.value); });
+
 }
 
 // Update the data when the user selects a different radio button
