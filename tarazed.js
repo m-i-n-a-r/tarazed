@@ -190,7 +190,7 @@ function updateData() {
                 drawChartAggregate(decadeAggregatedData)
             }
             if(mode == "year") { 
-                const yearlyAggregatedData = yearlyAggregateData(storeData);
+                const yearlyAggregatedData = yearlyAggregateData(storedData);
                 drawChartAggregate(yearlyAggregatedData)
             }
             if(mode == "month") {
