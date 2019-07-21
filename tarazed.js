@@ -5,14 +5,14 @@ const firstLaunchYear = 1961;
 
 // Some useful variables, all in the same place to simplify the configuration
 var idToSelect = ["#tarazed1"];
-var margin = {top: 20, right: 20, bottom: 30, left: 40},
+var margin = { top: 20, right: 20, bottom: 30, left: 40 },
     width = 1800 - margin.left - margin.right,
     height = 600 - margin.top - margin.bottom;
 var x = d3.scaleBand()
-          .range([0, width])
-          .padding(0.1);
+    .range([0, width])
+    .padding(0.1);
 var y = d3.scaleLinear()
-          .range([height, 0]);
+    .range([height, 0]);
 var loadingColor = "#aaaaaa";
 var loadingText = "...fetching results...";
 var spinnerRadius = 50;
@@ -20,6 +20,8 @@ var limit = 3000; // Takes up to this number of launches
 var baseUrl = "https://launchlibrary.net/1.4/launch?mode=verbose"; // Verbose, list or summary
 var finalPageUrl = baseUrl + "&limit=" + limit;
 var futureGray = "rgba(160, 160, 160, 0.6)";
+var hoverBarColor = "#000000"
+var outBarColor = "#ff0000"
 var storedData;
 
 // The main container, it should scale to fit the screen div size
@@ -70,7 +72,7 @@ function transitionFunction(path) {
 }
 
 // Get a gigantic json containing every launch in history
-d3.json(finalPageUrl, json => {    
+d3.json(finalPageUrl, json => {
     // Remove the "loading" text
     d3.select("#loadingtext").transition("removeLoadingText")
         .duration(500)
@@ -115,14 +117,24 @@ function decadeAggregateData(data) {
     return decadeAggregate;
 }
 
-function countryAggregateData(data) {
+function lspAggregateData(data) {
     const launches = data.launches;
-    // Aggregate data by country
-    countryAggregate = d3.nest()
+    // Aggregate data by launch service provider
+    lspAggregate = d3.nest()
+        .key(function (d) { return d.lsp.abbrev; })
+        .rollup(function (v) { return v.length; })
+        .entries(launches);
+    return lspAggregate;
+}
+
+function locationAggregateData(data) {
+    const launches = data.launches;
+    // Aggregate data by launch location
+    locationAggregate = d3.nest()
         .key(function (d) { return d.location.countryCode; })
         .rollup(function (v) { return v.length; })
         .entries(launches);
-    return countryAggregate;
+    return locationAggregate;
 }
 
 // Draw a barchart depending on the aggregation choice
@@ -131,8 +143,8 @@ function drawChartAggregate(data) {
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
     // Scale the range of the data in the domains
-    x.domain(data.map(function(d) { return d.key; }));
-    y.domain([0, d3.max(data, function(d) { return d.value; })]);
+    x.domain(data.map(function (d) { return d.key; }));
+    y.domain([0, d3.max(data, function (d) { return d.value; })]);
 
     // Append the rectangles for the bar chart (animation and color gradient)
     svg.selectAll(".bar")
@@ -143,19 +155,22 @@ function drawChartAggregate(data) {
         .attr("fill", function (d, i) {
             let columnsNumber = Object.keys(data).length
             let normalizer = columnsNumber / 100
-            if(parseInt(d.key.substring(0, 4)) > new Date().getFullYear()) return futureGray 
-            else return 'rgb(' + (140 + i / normalizer) + ', ' + (35 + (i * 0.8 / normalizer)) 
-            + ', ' + (135 - (i / normalizer)) + ')' 
+            if (parseInt(d.key.substring(0, 4)) > new Date().getFullYear()) return futureGray
+            else return 'rgb(' + (140 + i / normalizer) + ', ' + (35 + (i * 0.8 / normalizer))
+                + ', ' + (135 - (i / normalizer)) + ')'
         })
-        .attr("x", function(d) { return x(d.key); })
+        .attr("x", function (d) { return x(d.key); })
         .attr("width", x.bandwidth())
         .attr("y", height)
         .attr("height", 0)
-		.transition("bar spawning")
-		.duration(250)
-        .delay(function (d, i) { return i * 50;	})
-        .attr("y", function(d) { return y(d.value); })
-		.attr("height", function (d, i) { return height - y(d.value); });
+        .on("mouseover", barMouseover)
+        .on("mouseout", barMouseout)
+        .on("click", barClick)
+        .transition("bar spawning")
+        .duration(250)
+        .delay(function (d, i) { return i * 50; })
+        .attr("y", function (d) { return y(d.value); })
+        .attr("height", function (d, i) { return height - y(d.value); });
 
     // Add the x Axis
     svg.append("g")
@@ -171,14 +186,34 @@ function drawChartAggregate(data) {
 
 }
 
+// Action to take on mouse click
+function barClick() {
+    d3.select(this).transition("blinkAndRenderStats")
+        .duration(500)
+        .style("opacity", 0.5)
+        .transition("deblinkAndRenderStats")
+        .duration(500)
+        .style("opacity", 1.0);
+}
+
+// Change the color on hover, change it back to normal on mouse out
+function barMouseover() {
+    d3.select(this).transition("hoverBar")
+        .style("fill", hoverBarColor)
+}
+function barMouseout() {
+    d3.select(this).transition("outBar")
+        .style("fill", outBarColor)
+}
+
 function storeData(data) {
     storedData = data;
     const yearlyAggregatedData = yearlyAggregateData(data);
     drawChartAggregate(yearlyAggregatedData)
 }
 
-    var dataDim = d3.select("#modes")
-        dataDim.on("change", updateData)
+var dataDim = d3.select("#modes")
+dataDim.on("change", updateData)
 
 // Update the data when the user selects a different radio button
 function updateData() {
@@ -187,19 +222,19 @@ function updateData() {
     d3.selectAll(".axis").remove();
     var modes = document.getElementById("modes")
     var mode;
-        for(var i = 0; i < modes.length; i++) {
-            if(modes[i].checked) {
+    for (var i = 0; i < modes.length; i++) {
+        if (modes[i].checked) {
             mode = modes[i].id;
-            if(mode == "decade") {
+            if (mode == "decade") {
                 const decadeAggregatedData = decadeAggregateData(storedData);
                 drawChartAggregate(decadeAggregatedData)
             }
-            if(mode == "year") { 
+            if (mode == "year") {
                 const yearlyAggregatedData = yearlyAggregateData(storedData);
                 drawChartAggregate(yearlyAggregatedData)
             }
-            if(mode == "month") {
-                const monthlyAggregatedData = monthlyAggregateData(storedData);
+            if (mode == "month") {
+                const monthlyAggregatedData = lspAggregateData(storedData);
                 drawChartAggregate(monthlyAggregatedData)
             }
         }
