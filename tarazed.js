@@ -160,11 +160,13 @@ function drawChartAggregate(data) {
     // Add the x Axis
     svg.append("g")
         .attr("transform", "translate(" + 0 + "," + (height) + ")")
+        .attr("class", "axis")
         .call(d3.axisBottom(x));
 
     // Add the y Axis
     svg.append("g")
         .attr("transform", "translate(" + 0 + "," + 0 + ")")
+        .attr("class", "axis")
         .call(d3.axisLeft(y));
 
 }
@@ -180,6 +182,9 @@ function storeData(data) {
 
 // Update the data when the user selects a different radio button
 function updateData() {
+    // Remove any previous visualization
+    d3.selectAll(".bar").remove();
+    d3.selectAll(".axis").remove();
     var modes = document.getElementById("modes")
     var mode;
         for(var i = 0; i < modes.length; i++) {
