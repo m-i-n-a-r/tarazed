@@ -20,9 +20,7 @@ var limit = 3000; // Takes up to this number of launches
 var baseUrl = "https://launchlibrary.net/1.4/launch?mode=verbose"; // Verbose, list or summary
 var finalPageUrl = baseUrl + "&limit=" + limit;
 var futureGray = "rgba(160, 160, 160, 0.6)";
-var hoverBarColor = "#000000"
-var outBarColor = "#ff0000"
-var storedData;
+var storedData, decadeAggregatedData, yearlyAggregatedData, monthlyAggregatedData, lspAggregatedData, locationAggregatedData;
 
 // The main container, it should scale to fit the screen div size
 var svg = d3.select(idToSelect[0]).append("svg")
@@ -151,6 +149,7 @@ function drawChartAggregate(data) {
         .data(data)
         .enter()
         .append("rect")
+        .attr("id", function (d) { return d.key; })
         .attr("class", "bar") // Assign the color dinamically from 140,35,135 to 240,115,35 (delta +100,+80,-100)
         .attr("fill", function (d, i) {
             let columnsNumber = Object.keys(data).length
@@ -186,12 +185,25 @@ function drawChartAggregate(data) {
 
 }
 
+// Draw some stats and subplots for the chosen bar
+function drawStats(mode, time) {
+    console.log(mode + "    " + time);
+}
+
 // Action to take on mouse click
 function barClick() {
-    d3.select(this).transition("blinkAndRenderStats")
+    var modes = document.getElementById("modes")
+    var mode;
+    for (var i = 0; i < modes.length; i++) {
+        if (modes[i].checked) mode = modes[i].id;
+    }
+    var time = d3.select(this).attr("id");
+    drawStats(mode, time)
+
+    d3.select(this).transition("blink")
         .duration(500)
         .style("opacity", 0.5)
-        .transition("deblinkAndRenderStats")
+        .transition("deblink")
         .duration(500)
         .style("opacity", 1.0);
 }
@@ -199,16 +211,21 @@ function barClick() {
 // Change the color on hover, change it back to normal on mouse out
 function barMouseover() {
     d3.select(this).transition("hoverBar")
-        .style("fill", hoverBarColor)
+        .style("stroke", "#bbbb55")
+        .style("stroke-width", 10)
 }
+
 function barMouseout() {
     d3.select(this).transition("outBar")
-        .style("fill", outBarColor)
+        .style("stroke", "rgba(160, 160, 160, 0.0)")
+        .style("strokeWidth", 0)
 }
 
 function storeData(data) {
     storedData = data;
-    const yearlyAggregatedData = yearlyAggregateData(data);
+
+    // Initial barchart
+    yearlyAggregatedData = yearlyAggregateData(data);
     drawChartAggregate(yearlyAggregatedData)
 }
 
@@ -226,15 +243,15 @@ function updateData() {
         if (modes[i].checked) {
             mode = modes[i].id;
             if (mode == "decade") {
-                const decadeAggregatedData = decadeAggregateData(storedData);
+                decadeAggregatedData = decadeAggregateData(storedData);
                 drawChartAggregate(decadeAggregatedData)
             }
             if (mode == "year") {
-                const yearlyAggregatedData = yearlyAggregateData(storedData);
+                yearlyAggregatedData = yearlyAggregateData(storedData);
                 drawChartAggregate(yearlyAggregatedData)
             }
             if (mode == "month") {
-                const monthlyAggregatedData = lspAggregateData(storedData);
+                monthlyAggregatedData = lspAggregateData(storedData);
                 drawChartAggregate(monthlyAggregatedData)
             }
         }
