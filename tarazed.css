@@ -17,6 +17,24 @@ h1 {
     color: #aaa;
 }
 
+h2 {
+  text-align: center;
+  margin: 1.5rem auto 1rem;
+  font-family: 'Ubuntu', sans-serif;
+  font-weight: normal;
+  font-size: 2rem;
+  color: #aaa;
+}
+
+h5 {
+  text-align: center;
+  margin: 1.5rem auto 1rem;
+  font-family: 'Ubuntu', sans-serif;
+  font-weight: normal;
+  font-size: 1rem;
+  color: #aaa;
+}
+
 .axis text {
     font: 14px sans-serif;
   }

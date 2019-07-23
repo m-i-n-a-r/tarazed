@@ -4,10 +4,13 @@
 const firstLaunchYear = 1961;
 
 // Some useful variables, all in the same place to simplify the configuration
-var idToSelect = ["#tarazed1"];
+var idToSelect = ["#tarazed1", "#tarazed2"];
 var margin = { top: 20, right: 20, bottom: 30, left: 40 },
     width = 1800 - margin.left - margin.right,
     height = 600 - margin.top - margin.bottom;
+var margin2 = { top: 20, right: 20, bottom: 30, left: 40 },
+    width2 = 1800 - margin2.left - margin2.right,
+    height2 = 300 - margin2.top - margin2.bottom;
 var x = d3.scaleBand()
     .range([0, width])
     .padding(0.1);
@@ -19,13 +22,23 @@ var spinnerRadius = 50;
 var limit = 3000; // Takes up to this number of launches
 var baseUrl = "https://launchlibrary.net/1.4/launch?mode=verbose"; // Verbose, list or summary
 var finalPageUrl = baseUrl + "&limit=" + limit;
+var nextLaunchUrl = "https://launchlibrary.net/1.4/launch/next/1";
 var futureGray = "rgba(160, 160, 160, 0.6)";
-var storedData, decadeAggregatedData, yearlyAggregatedData, monthlyAggregatedData, lspAggregatedData, locationAggregatedData;
+var storedData;
+var decadeAggregatedData;
+var yearlyAggregatedData;
+var monthlyAggregatedData;
+var lspAggregatedData;
+var locationAggregatedData;
 
-// The main container, it should scale to fit the screen div size
+// The main containers, they should scale to fit the screen div size
 var svg = d3.select(idToSelect[0]).append("svg")
     .attr("preserveAspectRatio", "xMinYMin meet")
     .attr("viewBox", "0 0 " + (width + margin.left + margin.right) + " " + (height + margin.top + margin.bottom))
+
+var svgStats = d3.select(idToSelect[1]).append("svg")
+    .attr("preserveAspectRatio", "xMinYMin meet")
+    .attr("viewBox", "0 0 " + (width2 + margin2.left + margin2.right) + " " + (height2 + margin2.top + margin2.bottom))
 
 // A loading text
 svg.append("text")
@@ -69,6 +82,32 @@ function transitionFunction(path) {
         .each("end", function () { d3.select(this).call(transition); });
 }
 
+// Given its data, display the next launch
+function displayNextLaunch(data) {
+    var countDownDate = new Date(data.launches[data.launches.length - 1].windowstart).getTime();
+    // Update the count down every 1 second
+    var x = setInterval(function() {
+        // Get today's date and time
+        var now = new Date().getTime();
+        // Find the distance between now and the count down date
+        var distance = countDownDate - now;
+
+        // Time calculations for days, hours, minutes and seconds
+        var days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        var seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+        // Display the result in the element with id="demo"
+        document.getElementById("nextlaunch").innerHTML = "Next launch: " + days + "d " + hours + "h " + minutes + "m " + seconds + "s ";
+    // If the count down is finished, write some text 
+    if (distance < 0) {
+        clearInterval(x);
+        document.getElementById("nextlaunch").innerHTML = "Launch done! Refresh to see the next one!";
+    }
+    }, 1000);
+}
+
 // Get a gigantic json containing every launch in history
 d3.json(finalPageUrl, json => {
     // Remove the "loading" text
@@ -81,7 +120,14 @@ d3.json(finalPageUrl, json => {
         .attr("opacity", 0)
         .remove();
 
+    // Store the data for future uses
     storeData(json);
+});
+
+// Get the next launch
+d3.json(nextLaunchUrl, json => {
+    // Display next launch
+    displayNextLaunch(json);
 });
 
 // Data aggregation functions
@@ -187,7 +233,12 @@ function drawChartAggregate(data) {
 
 // Draw some stats and subplots for the chosen bar
 function drawStats(mode, time) {
-    console.log(mode + "    " + time);
+    svgStats.append("text")
+        .attr("text-anchor", "middle")
+        .attr("dominant-baseline", "central")
+        .attr("fill", futureGray)
+        .attr("font-size", "3em")
+        .text(function (d) { return storedData.launches.location; });
 }
 
 // Action to take on mouse click
@@ -226,7 +277,7 @@ function storeData(data) {
 
     // Initial barchart
     yearlyAggregatedData = yearlyAggregateData(data);
-    drawChartAggregate(yearlyAggregatedData)
+    drawChartAggregate(yearlyAggregatedData);
 }
 
 var dataDim = d3.select("#modes")

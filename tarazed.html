@@ -5,15 +5,17 @@
 <script src="https://d3js.org/d3.v4.min.js"></script>
 
 <body>
-    <h1>Tarazed - History of space launches</h1>
+    <h2>Tarazed - History of space launches</h2>
+    <h5 id="nextlaunch">Next launch: </h5>
     <div id="tarazed1"></div>
     <div>
         <form id="modes" style="text-align:center"> <!-- TODO remove horrible inline css -->
             <input type="radio" id="decade" name="mode"> Decades view
             <input type="radio" id="year" name="mode" checked> Years view
-            <input type="radio" id="month" name="mode"> Months view
+            <!--<input type="radio" id="month" name="mode"> Months view-->
         </form>
     </div>
+    <div id="tarazed2"></div>
 </body>
 
 <script src="tarazed.js"></script>
