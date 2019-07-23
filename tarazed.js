@@ -5,7 +5,7 @@ const firstLaunchYear = 1961;
 
 // Some useful variables, all in the same place to simplify the configuration
 var idToSelect = ["#tarazed1", "#tarazed2"];
-var margin = { top: 20, right: 20, bottom: 30, left: 40 },
+var margin = { top: 20, right: 20, bottom: 50, left: 40 },
     width = 1800 - margin.left - margin.right,
     height = 600 - margin.top - margin.bottom;
 var margin2 = { top: 20, right: 20, bottom: 30, left: 40 },
@@ -183,7 +183,7 @@ function locationAggregateData(data) {
 
 // Draw a barchart depending on the aggregation choice
 function drawChartAggregate(data) {
-    svg.append("g")
+    var g = svg.append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
     // Scale the range of the data in the domains
@@ -191,7 +191,7 @@ function drawChartAggregate(data) {
     y.domain([0, d3.max(data, function (d) { return d.value; })]);
 
     // Append the rectangles for the bar chart (animation and color gradient)
-    svg.selectAll(".bar")
+    g.selectAll(".bar")
         .data(data)
         .enter()
         .append("rect")
@@ -218,13 +218,18 @@ function drawChartAggregate(data) {
         .attr("height", function (d, i) { return height - y(d.value); });
 
     // Add the x Axis
-    svg.append("g")
+    g.append("g")
         .attr("transform", "translate(" + 0 + "," + (height) + ")")
         .attr("class", "axis")
-        .call(d3.axisBottom(x));
+        .call(d3.axisBottom(x))
+        .selectAll("text")
+            .style("text-anchor", "end")
+            .attr("dx", "-.8em")
+            .attr("dy", "-.55em")
+            .attr("transform", "rotate(-90)" );
 
     // Add the y Axis
-    svg.append("g")
+    g.append("g")
         .attr("transform", "translate(" + 0 + "," + 0 + ")")
         .attr("class", "axis")
         .call(d3.axisLeft(y));
@@ -288,6 +293,7 @@ function updateData() {
     // Remove any previous visualization
     d3.selectAll(".bar").remove();
     d3.selectAll(".axis").remove();
+    d3.selectAll("g").remove();
     var modes = document.getElementById("modes")
     var mode;
     for (var i = 0; i < modes.length; i++) {
