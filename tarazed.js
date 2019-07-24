@@ -8,23 +8,23 @@ var idToSelect = ["#tarazed1", "#tarazed2"];
 var margin = { top: 20, right: 20, bottom: 60, left: 50 },
     width = 1800 - margin.left - margin.right,
     height = 600 - margin.top - margin.bottom;
-var margin2 = { top: 20, right: 20, bottom: 30, left: 40 },
-    width2 = 1800 - margin2.left - margin2.right,
-    height2 = 300 - margin2.top - margin2.bottom;
+var marginStatBlock = { top: 20, right: 20, bottom: 30, left: 40 },
+    widthStatBlock = 1800 - marginStatBlock.left - marginStatBlock.right,
+    heightStatBlock = 300 - marginStatBlock.top - marginStatBlock.bottom;
 var x = d3.scaleBand()
     .range([0, width])
     .padding(0.1);
 var y = d3.scaleLinear()
     .range([height, 0]);
 var loadingColor = "#aaaaaa";
+var futureGray = "rgba(160, 160, 160, 0.6)";
+var axisTextColor = "#333";
 var loadingText = "...fetching results...";
 var spinnerRadius = 50;
 var limit = 3000; // Takes up to this number of launches
 var baseUrl = "https://launchlibrary.net/1.4/launch?mode=verbose"; // Verbose, list or summary
 var finalPageUrl = baseUrl + "&limit=" + limit;
 var nextLaunchUrl = "https://launchlibrary.net/1.4/launch/next/1";
-var futureGray = "rgba(160, 160, 160, 0.6)";
-var axisTextColor = "#333";
 var storedData;
 var decadeAggregatedData;
 var yearlyAggregatedData;
@@ -36,10 +36,6 @@ var locationAggregatedData;
 var svg = d3.select(idToSelect[0]).append("svg")
     .attr("preserveAspectRatio", "xMinYMin meet")
     .attr("viewBox", "0 0 " + (width + margin.left + margin.right) + " " + (height + margin.top + margin.bottom))
-
-var svgStats = d3.select(idToSelect[1]).append("svg")
-    .attr("preserveAspectRatio", "xMinYMin meet")
-    .attr("viewBox", "0 0 " + (width2 + margin2.left + margin2.right) + " " + (height2 + margin2.top + margin2.bottom))
 
 // A loading text
 svg.append("text")
@@ -87,7 +83,7 @@ function transitionFunction(path) {
 function displayNextLaunch(data) {
     var countDownDate = new Date(data.launches[0].windowstart).getTime();
     // Update the count down every 1 second
-    var x = setInterval(function() {
+    var x = setInterval(function () {
         // Get today's date and time
         var now = new Date().getTime();
         // Find the distance between now and the count down date
@@ -101,12 +97,12 @@ function displayNextLaunch(data) {
 
         // Display the result in the element with id="demo"
         document.getElementById("nextlaunch").innerHTML = "Next launch: " + days + "d " + hours +
-        "h " + minutes + "m " + seconds + "s - name: " + data.launches[0].name;
-    // If the count down is finished, write some text 
-    if (distance < 0) {
-        clearInterval(x);
-        document.getElementById("nextlaunch").innerHTML = "Launch terminated! Refresh to see the next one!";
-    }
+            "h " + minutes + "m " + seconds + "s - name: " + data.launches[0].name;
+        // If the count down is finished, write some text 
+        if (distance < 0) {
+            clearInterval(x);
+            document.getElementById("nextlaunch").innerHTML = "Launch terminated! Refresh to see the next one!";
+        }
     }, 1000);
 }
 
@@ -225,12 +221,12 @@ function drawChartAggregate(data) {
         .attr("class", "axis")
         .call(d3.axisBottom(x))
         .selectAll("text")
-            .style("text-anchor", "end")
-            .attr("dx", "-.8em")
-            .attr("dy", "-.55em")
-            .attr("transform", "rotate(-90)" )
-            .attr("fill", axisTextColor)
-            .style("font-size", "1.8em");
+        .style("text-anchor", "end")
+        .attr("dx", "-.8em")
+        .attr("dy", "-.55em")
+        .attr("transform", "rotate(-90)")
+        .attr("fill", axisTextColor)
+        .style("font-size", "1.8em");
 
     // Add the y Axis
     g.append("g")
@@ -238,20 +234,46 @@ function drawChartAggregate(data) {
         .attr("class", "axis")
         .call(d3.axisLeft(y))
         .selectAll("text")
-            .attr("fill", axisTextColor)
-            .style("font-size", "1.8em");
+        .attr("fill", axisTextColor)
+        .style("font-size", "1.8em");
 
 }
 
 // Draw some stats and subplots for the chosen bar
 function drawStats(mode, time) {
+    d3.selectAll(".stats").remove();
+    var svgStats = d3.select(idToSelect[1]).append("svg")
+        .attr("class", "stats")
+        .attr("preserveAspectRatio", "xMinYMin meet")
+        .attr("viewBox", "0 0 " + (widthStatBlock + marginStatBlock.left + marginStatBlock.right) + " " + (heightStatBlock + marginStatBlock.top + marginStatBlock.bottom))
+
     // Chosen stats: total launches, location pie chart, lsp pie chart, failed launches vs completed launches
-    svgStats.append("text")
-        .attr("text-anchor", "middle")
-        .attr("dominant-baseline", "central")
-        .attr("fill", futureGray)
-        .attr("font-size", "3em")
-        .text(function (d) { return storedData.launches.location; });
+    var radius = Math.min(widthStatBlock, heightStatBlock) / 2 - marginStatBlock.bottom;
+    var gPie = svgStats.append("g")
+        .attr("transform", "translate(" + widthStatBlock / 2 + "," + heightStatBlock / 2 + ")");
+    // Create dummy data
+    var data = { a: Math.floor(Math.random() * 100), b: Math.floor(Math.random() * 100), c: Math.floor(Math.random() * 100), d: Math.floor(Math.random() * 100), e: Math.floor(Math.random() * 100) }
+    // Set the color scale
+    var color = d3.scaleOrdinal()
+        .domain(data)
+        .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56"])
+    // Compute the position of each group on the pie
+    var pie = d3.pie()
+        .value(function (d) { return d.value; })
+    var data_ready = pie(d3.entries(data))
+    // Build the pie chart: Basically, each part of the pie is a path that we build using the arc function
+    gPie.selectAll('whatever')
+        .data(data_ready)
+        .enter()
+        .append('path')
+        .attr('d', d3.arc()
+            .innerRadius(50) // This is the size of the donut hole
+            .outerRadius(radius)
+        )
+        .attr('fill', function (d) { return (color(d.data.key)) })
+        .attr("stroke", "black")
+        .style("stroke-width", "2px")
+        .style("opacity", 0.7)
 }
 
 // Action to take on mouse click
