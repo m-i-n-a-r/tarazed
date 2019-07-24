@@ -5,7 +5,7 @@ const firstLaunchYear = 1961;
 
 // Some useful variables, all in the same place to simplify the configuration
 var idToSelect = ["#tarazed1", "#tarazed2"];
-var margin = { top: 20, right: 20, bottom: 50, left: 40 },
+var margin = { top: 20, right: 20, bottom: 60, left: 50 },
     width = 1800 - margin.left - margin.right,
     height = 600 - margin.top - margin.bottom;
 var margin2 = { top: 20, right: 20, bottom: 30, left: 40 },
@@ -24,6 +24,7 @@ var baseUrl = "https://launchlibrary.net/1.4/launch?mode=verbose"; // Verbose, l
 var finalPageUrl = baseUrl + "&limit=" + limit;
 var nextLaunchUrl = "https://launchlibrary.net/1.4/launch/next/1";
 var futureGray = "rgba(160, 160, 160, 0.6)";
+var axisTextColor = "#333";
 var storedData;
 var decadeAggregatedData;
 var yearlyAggregatedData;
@@ -84,7 +85,7 @@ function transitionFunction(path) {
 
 // Given its data, display the next launch
 function displayNextLaunch(data) {
-    var countDownDate = new Date(data.launches[data.launches.length - 1].windowstart).getTime();
+    var countDownDate = new Date(data.launches[0].windowstart).getTime();
     // Update the count down every 1 second
     var x = setInterval(function() {
         // Get today's date and time
@@ -99,11 +100,12 @@ function displayNextLaunch(data) {
         var seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
         // Display the result in the element with id="demo"
-        document.getElementById("nextlaunch").innerHTML = "Next launch: " + days + "d " + hours + "h " + minutes + "m " + seconds + "s ";
+        document.getElementById("nextlaunch").innerHTML = "Next launch: " + days + "d " + hours +
+        "h " + minutes + "m " + seconds + "s - name: " + data.launches[0].name;
     // If the count down is finished, write some text 
     if (distance < 0) {
         clearInterval(x);
-        document.getElementById("nextlaunch").innerHTML = "Launch done! Refresh to see the next one!";
+        document.getElementById("nextlaunch").innerHTML = "Launch terminated! Refresh to see the next one!";
     }
     }, 1000);
 }
@@ -226,18 +228,24 @@ function drawChartAggregate(data) {
             .style("text-anchor", "end")
             .attr("dx", "-.8em")
             .attr("dy", "-.55em")
-            .attr("transform", "rotate(-90)" );
+            .attr("transform", "rotate(-90)" )
+            .attr("fill", axisTextColor)
+            .style("font-size", "1.8em");
 
     // Add the y Axis
     g.append("g")
         .attr("transform", "translate(" + 0 + "," + 0 + ")")
         .attr("class", "axis")
-        .call(d3.axisLeft(y));
+        .call(d3.axisLeft(y))
+        .selectAll("text")
+            .attr("fill", axisTextColor)
+            .style("font-size", "1.8em");
 
 }
 
 // Draw some stats and subplots for the chosen bar
 function drawStats(mode, time) {
+    // Chosen stats: total launches, location pie chart, lsp pie chart, failed launches vs completed launches
     svgStats.append("text")
         .attr("text-anchor", "middle")
         .attr("dominant-baseline", "central")
