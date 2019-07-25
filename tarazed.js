@@ -4,12 +4,12 @@
 const firstLaunchYear = 1961;
 
 // Some useful variables, all in the same place to simplify the configuration
-var idToSelect = ["#tarazed1", "#tarazed2"];
+var idToSelect = ["#tarazed1", "#tarazed2", "#tarazed3", "#tarazed4"];
 var margin = { top: 20, right: 20, bottom: 60, left: 50 },
     width = 1800 - margin.left - margin.right,
     height = 600 - margin.top - margin.bottom;
 var marginStatBlock = { top: 20, right: 20, bottom: 30, left: 40 },
-    widthStatBlock = 1800 - marginStatBlock.left - marginStatBlock.right,
+    widthStatBlock = 600 - marginStatBlock.left - marginStatBlock.right,
     heightStatBlock = 300 - marginStatBlock.top - marginStatBlock.bottom;
 var x = d3.scaleBand()
     .range([0, width])
