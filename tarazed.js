@@ -109,7 +109,7 @@ function displayNextLaunch(data) {
 
 // Get a gigantic json containing every launch in history
 d3.json(finalPageUrl, json => {
-    // Remove the "loading" text
+    // Remove the "loading" screen, show the mode radio buttons
     d3.select("#loadingtext").transition("removeLoadingText")
         .duration(500)
         .attr("opacity", 0)
@@ -118,6 +118,7 @@ d3.json(finalPageUrl, json => {
         .duration(500)
         .attr("opacity", 0)
         .remove();
+    document.getElementById('modes').style.display = 'block';
 
     // Store the data for future uses
     storeData(json);
@@ -250,38 +251,75 @@ function drawStats(mode, time) {
     drawDonutLsp(mode, time);
 }
 
+// Draw the subcharts
 function drawDonutLocation(mode, time) {
     var svgStats = d3.select(idToSelect[1]).append("svg")
-        .attr("class", "stats")
-        .attr("preserveAspectRatio", "xMinYMin meet")
-        .attr("viewBox", "0 0 " + (widthStatBlock + marginStatBlock.left + marginStatBlock.right) + " " + (heightStatBlock + marginStatBlock.top + marginStatBlock.bottom))
+    .attr("class", "stats")
+    .attr("preserveAspectRatio", "xMinYMin meet")
+    .attr("viewBox", "0 0 " + (widthStatBlock + marginStatBlock.left + marginStatBlock.right) + " " + (heightStatBlock + marginStatBlock.top + marginStatBlock.bottom))
+    .append("g");
 
-    var radius = Math.min(widthStatBlock, heightStatBlock) / 2 - marginStatBlock.bottom;
-    var gPie = svgStats.append("g")
-        .attr("transform", "translate(" + widthStatBlock / 2 + "," + heightStatBlock / 2 + ")");
-    // Create dummy data
-    var data = { a: Math.floor(Math.random() * 100), b: Math.floor(Math.random() * 100), c: Math.floor(Math.random() * 100), d: Math.floor(Math.random() * 100), e: Math.floor(Math.random() * 100) }
-    // Set the color scale
-    var color = d3.scaleOrdinal()
-        .domain(data)
-        .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56"])
-    // Compute the position of each group on the pie
-    var pie = d3.pie()
-        .value(function (d) { return d.value; })
-    var data_ready = pie(d3.entries(data))
-    // Build the pie chart: Basically, each part of the pie is a path that we build using the arc function
-    gPie.selectAll('whatever')
-        .data(data_ready)
+    svgStats.append("g")
+        .attr("class", "slices");
+    svgStats.append("g")
+        .attr("class", "labels");
+    svgStats.append("g")
+        .attr("class", "lines");
+    var radius = Math.min(widthStatBlock, heightStatBlock) / 2;
+    var color = d3.scaleOrdinal(d3.schemeCategory20);
+    var data = [26, 25, 10, 30, 30, 50, 33, 56, 38];
+    var pie = d3.pie().sort(null).value(d => d);
+    var arc = d3.arc().innerRadius(radius * 0.8).outerRadius(radius * 0.6);
+
+    var outerArc = d3.arc()
+        .outerRadius(radius * 0.9)
+        .innerRadius(radius * 0.9);
+
+    svgStats.attr("transform", "translate(" + widthStatBlock / 2 + "," + heightStatBlock / 2 + ")");
+
+    svgStats.selectAll('path')
+        .data(pie(data))
         .enter()
         .append('path')
-        .attr('d', d3.arc()
-            .innerRadius(50) // This is the size of the donut hole
-            .outerRadius(radius)
-        )
-        .attr('fill', function (d) { return (color(d.data.key)) })
-        .attr("stroke", "black")
-        .style("stroke-width", "0px")
-        .style("opacity", 0.7)
+        .attr('d', arc)
+        .attr('fill', (d, i) => color(i));
+    svgStats.append('g').classed('labels', true);
+    svgStats.append('g').classed('lines', true);
+
+    var polyline = svgStats.select('.lines')
+        .selectAll('polyline')
+        .data(pie(data))
+        .enter().append('polyline')
+        .attr('points', function (d) {
+            var pos = outerArc.centroid(d);
+            pos[0] = radius * 0.95 * (midAngle(d) < Math.PI ? 1 : -1);
+            return [arc.centroid(d), outerArc.centroid(d), pos]
+        });
+
+    var label = svgStats.select('.labels').selectAll('text')
+        .data(pie(data))
+        .enter().append('text')
+        .attr('dy', '.35em')
+        .html(function (d) {
+            return d.data;
+        })
+        .attr('transform', function (d) {
+            var pos = outerArc.centroid(d);
+            pos[0] = radius * 0.95 * (midAngle(d) < Math.PI ? 1 : -1);
+            return 'translate(' + pos + ')';
+        })
+        .style('text-anchor', function (d) {
+            return (midAngle(d)) < Math.PI ? 'start' : 'end';
+        });
+
+    svgStats.append('text')
+        .attr('class', 'toolCircle')
+        .attr('dy', -15) // Can adjust this to adjust text vertical alignment in tooltip
+        .html('Launch location')
+        .style('font-size', '.9em')
+        .style('text-anchor', 'middle');
+
+    function midAngle(d) { return d.startAngle + (d.endAngle - d.startAngle) / 2; }
 }
 
 function drawDonutCompletedFailed(mode, time) {
