@@ -19,6 +19,7 @@ var y = d3.scaleLinear()
 var loadingColor = "#aaaaaa";
 var futureGray = "rgba(160, 160, 160, 0.6)";
 var axisTextColor = "#333";
+var highlightColor = "#7da1e8";
 var loadingText = "...fetching results...";
 var spinnerRadius = 50;
 var limit = 3000; // Takes up to this number of launches
@@ -242,12 +243,19 @@ function drawChartAggregate(data) {
 // Draw some stats and subplots for the chosen bar
 function drawStats(mode, time) {
     d3.selectAll(".stats").remove();
+
+    // Chosen stats: total launches, location pie chart, lsp pie chart, failed launches vs completed launches
+    drawDonutLocation(mode, time);
+    drawDonutCompletedFailed(mode, time);
+    drawDonutLsp(mode, time);
+}
+
+function drawDonutLocation(mode, time) {
     var svgStats = d3.select(idToSelect[1]).append("svg")
         .attr("class", "stats")
         .attr("preserveAspectRatio", "xMinYMin meet")
         .attr("viewBox", "0 0 " + (widthStatBlock + marginStatBlock.left + marginStatBlock.right) + " " + (heightStatBlock + marginStatBlock.top + marginStatBlock.bottom))
 
-    // Chosen stats: total launches, location pie chart, lsp pie chart, failed launches vs completed launches
     var radius = Math.min(widthStatBlock, heightStatBlock) / 2 - marginStatBlock.bottom;
     var gPie = svgStats.append("g")
         .attr("transform", "translate(" + widthStatBlock / 2 + "," + heightStatBlock / 2 + ")");
@@ -272,7 +280,75 @@ function drawStats(mode, time) {
         )
         .attr('fill', function (d) { return (color(d.data.key)) })
         .attr("stroke", "black")
-        .style("stroke-width", "2px")
+        .style("stroke-width", "0px")
+        .style("opacity", 0.7)
+}
+
+function drawDonutCompletedFailed(mode, time) {
+    var svgStats = d3.select(idToSelect[2]).append("svg")
+        .attr("class", "stats")
+        .attr("preserveAspectRatio", "xMinYMin meet")
+        .attr("viewBox", "0 0 " + (widthStatBlock + marginStatBlock.left + marginStatBlock.right) + " " + (heightStatBlock + marginStatBlock.top + marginStatBlock.bottom))
+
+    var radius = Math.min(widthStatBlock, heightStatBlock) / 2 - marginStatBlock.bottom;
+    var gPie = svgStats.append("g")
+        .attr("transform", "translate(" + widthStatBlock / 2 + "," + heightStatBlock / 2 + ")");
+    // Create dummy data
+    var data = { a: Math.floor(Math.random() * 100), b: Math.floor(Math.random() * 100), c: Math.floor(Math.random() * 100), d: Math.floor(Math.random() * 100), e: Math.floor(Math.random() * 100) }
+    // Set the color scale
+    var color = d3.scaleOrdinal()
+        .domain(data)
+        .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56"])
+    // Compute the position of each group on the pie
+    var pie = d3.pie()
+        .value(function (d) { return d.value; })
+    var data_ready = pie(d3.entries(data))
+    // Build the pie chart: Basically, each part of the pie is a path that we build using the arc function
+    gPie.selectAll('whatever')
+        .data(data_ready)
+        .enter()
+        .append('path')
+        .attr('d', d3.arc()
+            .innerRadius(50) // This is the size of the donut hole
+            .outerRadius(radius)
+        )
+        .attr('fill', function (d) { return (color(d.data.key)) })
+        .attr("stroke", "black")
+        .style("stroke-width", "0px")
+        .style("opacity", 0.7)
+}
+
+function drawDonutLsp(mode, time) {
+    var svgStats = d3.select(idToSelect[3]).append("svg")
+        .attr("class", "stats")
+        .attr("preserveAspectRatio", "xMinYMin meet")
+        .attr("viewBox", "0 0 " + (widthStatBlock + marginStatBlock.left + marginStatBlock.right) + " " + (heightStatBlock + marginStatBlock.top + marginStatBlock.bottom))
+
+    var radius = Math.min(widthStatBlock, heightStatBlock) / 2 - marginStatBlock.bottom;
+    var gPie = svgStats.append("g")
+        .attr("transform", "translate(" + widthStatBlock / 2 + "," + heightStatBlock / 2 + ")");
+    // Create dummy data
+    var data = { a: Math.floor(Math.random() * 100), b: Math.floor(Math.random() * 100), c: Math.floor(Math.random() * 100), d: Math.floor(Math.random() * 100), e: Math.floor(Math.random() * 100) }
+    // Set the color scale
+    var color = d3.scaleOrdinal()
+        .domain(data)
+        .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56"])
+    // Compute the position of each group on the pie
+    var pie = d3.pie()
+        .value(function (d) { return d.value; })
+    var data_ready = pie(d3.entries(data))
+    // Build the pie chart: Basically, each part of the pie is a path that we build using the arc function
+    gPie.selectAll('whatever')
+        .data(data_ready)
+        .enter()
+        .append('path')
+        .attr('d', d3.arc()
+            .innerRadius(50) // This is the size of the donut hole
+            .outerRadius(radius)
+        )
+        .attr('fill', function (d) { return (color(d.data.key)) })
+        .attr("stroke", "black")
+        .style("stroke-width", "0px")
         .style("opacity", 0.7)
 }
 
@@ -297,7 +373,7 @@ function barClick() {
 // Change the color on hover, change it back to normal on mouse out
 function barMouseover() {
     d3.select(this).transition("hoverBar")
-        .style("stroke", "#bbbb55")
+        .style("stroke", highlightColor)
         .style("stroke-width", 10)
 }
 

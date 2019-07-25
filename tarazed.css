@@ -3,11 +3,12 @@
 body {
     font-size: 16px;
     color: #222;
-    background: #eee;
+    background: #fff;
     padding: 0 3rem 1rem 3rem;
     font-family: 'Ubuntu', sans-serif;
 }
 
+/* Headers */
 h1 {
     text-align: center;
     margin: 1.5rem auto 1rem;
@@ -35,20 +36,21 @@ h5 {
     color: #aaa;
 }
 
-.axis text {
-      font: 14px sans-serif;
-  }
-  .axis path,
-  .axis line {
-      fill: none;
-      stroke: #aaa;
-      shape-rendering: crispEdges;
-  }
+/* Main container, misc */
+.maincontainer {
+  margin-bottom: 15px;
+}
 
+.divider{
+  width: 30px;
+  height: auto;
+  display: inline-block;
+}
+
+/* Responsive stats */  
 .statscontainer {
      display: flex;
-     margin-top: 30px;
- 
+     margin-top: 15px;
 }
   
 .statssection {
@@ -61,3 +63,54 @@ h5 {
     }
 }
 
+/* Radio buttons */
+[type="radio"]:checked,
+[type="radio"]:not(:checked) {
+    position: absolute;
+    left: -9999px;
+}
+[type="radio"]:checked + label,
+[type="radio"]:not(:checked) + label
+{
+    position: relative;
+    padding-left: 28px;
+    cursor: pointer;
+    line-height: 20px;
+    display: inline-block;
+    color: #aaa;
+}
+[type="radio"]:checked + label:before,
+[type="radio"]:not(:checked) + label:before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 18px;
+    height: 18px;
+    border: 2px solid #aaa;
+    border-radius: 100%;
+    background: #fff;
+}
+[type="radio"]:checked + label:after,
+[type="radio"]:not(:checked) + label:after {
+    content: '';
+    width: 12px;
+    height: 12px;
+    background: #7da1e8;
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    border-radius: 100%;
+    -webkit-transition: all 0.2s ease;
+    transition: all 0.2s ease;
+}
+[type="radio"]:not(:checked) + label:after {
+    opacity: 0;
+    -webkit-transform: scale(0);
+    transform: scale(0);
+}
+[type="radio"]:checked + label:after {
+    opacity: 1;
+    -webkit-transform: scale(1);
+    transform: scale(1);
+}
