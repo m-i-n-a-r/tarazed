@@ -23,7 +23,7 @@ var highlightColor = "#7da1e8";
 var loadingText = "...fetching results...";
 var spinnerRadius = 50;
 var limit = 3000; // Takes up to this number of launches
-var baseUrl = "https://launchlibrary.net/1.4/launch?mode=verbose"; // Verbose, list or summary
+var baseUrl = "https://launchlibrary.net/1.4/launch?mode=list"; // Verbose, list or summary
 var finalPageUrl = baseUrl + "&limit=" + limit;
 var nextLaunchUrl = "https://launchlibrary.net/1.4/launch/next/1";
 var storedData;
@@ -131,21 +131,11 @@ d3.json(nextLaunchUrl, json => {
 });
 
 // Data aggregation functions
-function monthlyAggregateData(data) {
-    const launches = data.launches;
-    // Aggregate data by month
-    monthlyAggregate = d3.nest()
-        .key(function (d) { return parseInt(d.isostart.substring(0, 6)); })
-        .rollup(function (v) { return v.length; })
-        .entries(launches);
-    return monthlyAggregate;
-}
-
 function yearlyAggregateData(data) {
     const launches = data.launches;
     // Aggregate data by year
     yearlyAggregate = d3.nest()
-        .key(function (d) { return parseInt(d.isostart.substring(0, 4)); })
+        .key(function (d) { return parseInt(d.windowstart.substring(0, 4)); })
         .rollup(function (v) { return v.length; })
         .entries(launches);
     return yearlyAggregate;
@@ -155,7 +145,7 @@ function decadeAggregateData(data) {
     const launches = data.launches;
     // Aggregate data by decade
     decadeAggregate = d3.nest()
-        .key(function (d) { return parseInt(d.isostart.substring(0, 3) + "0"); })
+        .key(function (d) { return parseInt(d.windowstart.substring(0, 3) + "0"); })
         .rollup(function (v) { return v.length; })
         .entries(launches);
     return decadeAggregate;
