@@ -246,15 +246,16 @@ function drawStats(mode, time) {
     d3.selectAll(".stats").remove();
     var startDate = time + "-01-01";
     var endDate;
-    
-    if(mode == "year") { endDate = time + "-12-31"; }
-    if(mode == "decade") { endDate = (parseInt(time) + 9) + "-12-31"; }
+
+    if (mode == "year") { endDate = time + "-12-31"; }
+    if (mode == "decade") { endDate = (parseInt(time) + 9) + "-12-31"; }
     queryUrl = "https://launchlibrary.net/1.4/launch?mode=verbose&limit=9999&startdate=" + startDate + "&enddate=" + endDate;
-    d3.json(queryUrl, json => { 
+    d3.json(queryUrl, json => {
         // Chosen stats: total launches, location pie chart, lsp pie chart, failed launches vs completed launches
         drawDonutLocation(json);
         drawDonutCompletedFailed(json);
         drawDonutLsp(json);
+        d3.select(".loading").remove();
     });
 }
 
@@ -264,7 +265,7 @@ function drawDonutLocation(json) {
     // Get an array of numbers from a dynamical query to the site
     dictionary = locationAggregateData(json);
     var data = []
-    for(key in dictionary) data.push(dictionary[key].value)
+    for (key in dictionary) data.push(dictionary[key].value)
     var color = d3.scaleOrdinal()
         .domain(data)
         .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56"])
@@ -332,7 +333,7 @@ function drawDonutCompletedFailed(json) {
     // Get an array of numbers from a dynamical query to the site
     dictionary = statusAggregateData(json);
     var data = []
-    for(key in dictionary) data.push(dictionary[key].value)
+    for (key in dictionary) data.push(dictionary[key].value)
     var color = d3.scaleOrdinal()
         .domain(data)
         .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56"])
@@ -400,7 +401,7 @@ function drawDonutLsp(json) {
     // Get an array of numbers from a dynamical query to the site
     dictionary = lspAggregateData(json);
     var data = []
-    for(key in dictionary) data.push(dictionary[key].value)
+    for (key in dictionary) data.push(dictionary[key].value)
     var color = d3.scaleOrdinal()
         .domain(data)
         .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56"])
@@ -464,13 +465,60 @@ function drawDonutLsp(json) {
 }
 // Action to take on mouse click
 function barClick() {
+    var svgLoading = d3.select(idToSelect[2]).append("svg")
+    .attr("class", "loading")
+    .attr("preserveAspectRatio", "xMinYMin meet")
+    .attr("viewBox", "0 0 " + (widthStatBlock + marginStatBlock.left + marginStatBlock.right) + " " + (heightStatBlock + marginStatBlock.top + marginStatBlock.bottom));
+
+    // A loading text
+    svgLoading.append("text")
+        .attr("id", "loadingtext")
+        .attr("x", function (d) { return widthStatBlock / 2; })
+        .attr("y", function (d) { return heightStatBlock / 2; })
+        .style("text-anchor", "middle")
+        .attr("fill", loadingColor)
+        .attr("opacity", 1)
+        .attr("font-size", "2em")
+        .text(loadingText);
+
+    // A loading spinner
+    var radius = spinnerRadius;
+    var tau = 2 * Math.PI;
+    var arc = d3.arc()
+        .innerRadius(radius * 0.6)
+        .outerRadius(radius * 0.8)
+        .startAngle(0);
+    var spinner = svgLoading.append("g")
+        .attr("transform", "translate(" + widthStatBlock / 2 + "," + (heightStatBlock / 2 + 80) + ")")
+        .attr("id", "spinner")
+        .attr("opacity", 0.9)
+    var background = spinner.append("path")
+        .datum({ endAngle: 0.75 * tau })
+        .style("fill", loadingColor)
+        .attr("d", arc)
+        .call(spin, 1500)
+    function spin(selection, duration) {
+        selection.transition()
+            .duration(duration)
+            .attrTween("transform", function () {
+                return d3.interpolateString("rotate(45)", "rotate(405)");
+            });
+        setTimeout(function () { spin(selection, duration); }, duration);
+    }
+    function transitionFunction(path) {
+        path.transition()
+            .duration(7500)
+            .attrTween("stroke-dasharray", tweenDash)
+            .each("end", function () { d3.select(this).call(transition); });
+    }
+
     var modes = document.getElementById("modes")
     var mode;
     for (var i = 0; i < modes.length; i++) {
         if (modes[i].checked) mode = modes[i].id;
     }
     var time = d3.select(this).attr("id");
-    drawStats(mode, time)
+    drawStats(mode, time);
 
     d3.select(this).transition("blink")
         .duration(500)
@@ -510,6 +558,8 @@ function updateData() {
     d3.selectAll(".bar").remove();
     d3.selectAll(".axis").remove();
     d3.selectAll("g").remove();
+    d3.select(".loading").remove();
+    
     var modes = document.getElementById("modes")
     var mode;
     for (var i = 0; i < modes.length; i++) {
