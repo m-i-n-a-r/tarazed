@@ -16,8 +16,8 @@ var x = d3.scaleBand()
     .padding(0.1);
 var y = d3.scaleLinear()
     .range([height, 0]);
-var loadingColor = "#aaaaaa";
-var futureGray = "rgba(160, 160, 160, 0.6)";
+var textColor = "#aaaaaa";
+var futureEntriesColor = "rgba(160, 160, 160, 0.6)";
 var axisTextColor = "#333";
 var highlightColor = "#7da1e8";
 var loadingText = "...fetching results...";
@@ -44,7 +44,7 @@ svg.append("text")
     .attr("x", function (d) { return width / 2; })
     .attr("y", function (d) { return height / 2; })
     .style("text-anchor", "middle")
-    .attr("fill", loadingColor)
+    .attr("fill", textColor)
     .attr("opacity", 1)
     .attr("font-size", "3em")
     .text(loadingText);
@@ -62,7 +62,7 @@ var spinner = svg.append("g")
     .attr("opacity", 0.9)
 var background = spinner.append("path")
     .datum({ endAngle: 0.75 * tau })
-    .style("fill", loadingColor)
+    .style("fill", textColor)
     .attr("d", arc)
     .call(spin, 1500)
 function spin(selection, duration) {
@@ -85,7 +85,7 @@ function displayNextLaunch(data) {
     var countDownDate = new Date(data.launches[0].windowstart).getTime();
     // Update the count down every 1 second
     var x = setInterval(function () {
-        // Get today's date and time
+        // Get today"s date and time
         var now = new Date().getTime();
         // Find the distance between now and the count down date
         var distance = countDownDate - now;
@@ -118,7 +118,7 @@ d3.json(finalPageUrl, json => {
         .duration(500)
         .attr("opacity", 0)
         .remove();
-    document.getElementById('modes').style.display = 'block';
+    document.getElementById("modes").style.display = "block";
 
     // Store the data for future uses
     storeData(json);
@@ -165,7 +165,7 @@ function locationAggregateData(data) {
     const launches = data.launches;
     // Aggregate data by launch location
     locationAggregate = d3.nest()
-        .key(function (d) { return d.status; })
+        .key(function (d) { return d.location.countryCode; })
         .rollup(function (v) { return v.length; })
         .entries(launches);
     return locationAggregate;
@@ -173,12 +173,14 @@ function locationAggregateData(data) {
 
 function statusAggregateData(data) {
     const launches = data.launches;
-    // Aggregate data by status (completed/failed)
-    locationAggregate = d3.nest()
-        .key(function (d) { return d.location.countryCode; })
+    // Aggregate data by status (completed/failed). The standard status value has a lot of different values
+    statusAggregate = d3.nest()
+        .key(function (d) { if (d.status == 1 || d.status == 3) return "complete";
+            else return "failed";
+        })
         .rollup(function (v) { return v.length; })
         .entries(launches);
-    return locationAggregate;
+    return statusAggregate;
 }
 
 // Draw a barchart depending on the aggregation choice
@@ -200,9 +202,9 @@ function drawChartAggregate(data) {
         .attr("fill", function (d, i) {
             let columnsNumber = Object.keys(data).length
             let normalizer = columnsNumber / 100
-            if (parseInt(d.key.substring(0, 4)) > new Date().getFullYear()) return futureGray
-            else return 'rgb(' + (140 + i / normalizer) + ', ' + (35 + (i * 0.8 / normalizer))
-                + ', ' + (135 - (i / normalizer)) + ')'
+            if (parseInt(d.key.substring(0, 4)) > new Date().getFullYear()) return futureEntriesColor
+            else return "rgb(" + (140 + i / normalizer) + ", " + (35 + (i * 0.8 / normalizer))
+                + ", " + (135 - (i / normalizer)) + ")"
         })
         .attr("x", function (d) { return x(d.key); })
         .attr("width", x.bandwidth())
@@ -245,12 +247,12 @@ function drawChartAggregate(data) {
 function drawStats(mode, time) {
     var startDate = time + "-01-01";
     var endDate;
+    d3.selectAll(".stats").remove(); // TODO avoid the "double donuts" bug when clicking fast
 
     if (mode == "year") { endDate = time + "-12-31"; }
     if (mode == "decade") { endDate = (parseInt(time) + 9) + "-12-31"; }
     queryUrl = "https://launchlibrary.net/1.4/launch?mode=verbose&limit=9999&startdate=" + startDate + "&enddate=" + endDate;
     d3.json(queryUrl, json => {
-        d3.selectAll(".stats").remove(); // TODO avoid the "double donuts" bug when clicking fast
         // Chosen stats: total launches, location pie chart, lsp pie chart, failed launches vs completed launches
         drawDonutLocation(json);
         drawDonutCompletedFailed(json);
@@ -287,44 +289,44 @@ function drawDonutLocation(json) {
         .outerRadius(radius * 0.9)
         .innerRadius(radius * 0.9);
     svgStats.attr("transform", "translate(" + widthStatBlock / 2 + "," + heightStatBlock / 2 + ")");
-    svgStats.selectAll('path')
+    svgStats.selectAll("path")
         .data(pie(data))
         .enter()
-        .append('path')
-        .attr('d', arc)
-        .attr('fill', (d, i) => color(i));
-    svgStats.append('g').classed('labels', true);
-    svgStats.append('g').classed('lines', true);
-    var polyline = svgStats.select('.lines')
-        .selectAll('polyline')
+        .append("path")
+        .attr("d", arc)
+        .attr("fill", (d, i) => color(i));
+    svgStats.append("g").classed("labels", true);
+    svgStats.append("g").classed("lines", true);
+    var polyline = svgStats.select(".lines")
+        .selectAll("polyline")
         .data(pie(data))
-        .enter().append('polyline')
-        .attr('points', function (d) {
+        .enter().append("polyline")
+        .attr("points", function (d) {
             var pos = outerArc.centroid(d);
             pos[0] = radius * 0.95 * (midAngle(d) < Math.PI ? 1 : -1);
             return [arc.centroid(d), outerArc.centroid(d), pos]
         });
-    var label = svgStats.select('.labels').selectAll('text')
+    var label = svgStats.select(".labels").selectAll("text")
         .data(pie(data))
-        .enter().append('text')
-        .attr('dy', '.35em')
+        .enter().append("text")
+        .attr("dy", ".35em")
         .html(function (d) {
             return d.data;
         })
-        .attr('transform', function (d) {
+        .attr("transform", function (d) {
             var pos = outerArc.centroid(d);
             pos[0] = radius * 0.95 * (midAngle(d) < Math.PI ? 1 : -1);
-            return 'translate(' + pos + ')';
+            return "translate(" + pos + ")";
         })
-        .style('text-anchor', function (d) {
-            return (midAngle(d)) < Math.PI ? 'start' : 'end';
+        .style("text-anchor", function (d) {
+            return (midAngle(d)) < Math.PI ? "start" : "end";
         });
-    svgStats.append('text')
-        .attr('class', 'toolCircle')
-        .attr('dy', -15) // Can adjust this to adjust text vertical alignment in tooltip
-        .html('Launch location')
-        .style('font-size', '.9em')
-        .style('text-anchor', 'middle');
+    svgStats.append("text")
+        .attr("class", "toolCircle")
+        .attr("dy", -15) // Can adjust this to adjust text vertical alignment in tooltip
+        .html("Launch location")
+        .style("font-size", ".9em")
+        .style("text-anchor", "middle");
 
     function midAngle(d) { return d.startAngle + (d.endAngle - d.startAngle) / 2; }
 }
@@ -332,67 +334,81 @@ function drawDonutLocation(json) {
 function drawDonutCompletedFailed(json) {
     var radius = Math.min(widthStatBlock, heightStatBlock) / 2;
     // Get an array of numbers from a dynamical query to the site
-    dictionary = statusAggregateData(json);
+    aggregateDict = statusAggregateData(json);
     var data = []
-    for (key in dictionary) data.push(dictionary[key].value)
+    for (key in aggregateDict) data.push(aggregateDict[key].value)
     var color = d3.scaleOrdinal()
         .domain(data)
-        .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56"])
+        // Colors used in the donut chart
+        .range(["#a63fa1", "#ca7b49", "#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#aaaaaa"])
     var pie = d3.pie().sort(null).value(d => d);
-    var arc = d3.arc().innerRadius(radius * 0.8).outerRadius(radius * 0.5);
+    var arc = d3.arc().innerRadius(radius * 0.9).outerRadius(radius * 0.7);
+
+    // Select one of the 3 sub-areas of the stats
     var svgStats = d3.select(idToSelect[2]).append("svg")
         .attr("class", "stats")
         .attr("preserveAspectRatio", "xMinYMin meet")
         .attr("viewBox", "0 0 " + (widthStatBlock + marginStatBlock.left + marginStatBlock.right) + " " + (heightStatBlock + marginStatBlock.top + marginStatBlock.bottom))
         .append("g");
-    svgStats.append("g")
-        .attr("class", "slices");
-    svgStats.append("g")
-        .attr("class", "labels");
-    svgStats.append("g")
-        .attr("class", "lines");
     var outerArc = d3.arc()
         .outerRadius(radius * 0.9)
         .innerRadius(radius * 0.9);
     svgStats.attr("transform", "translate(" + widthStatBlock / 2 + "," + heightStatBlock / 2 + ")");
-    svgStats.selectAll('path')
+    svgStats.selectAll("path")
         .data(pie(data))
         .enter()
-        .append('path')
-        .attr('d', arc)
-        .attr('fill', (d, i) => color(i));
-    svgStats.append('g').classed('labels', true);
-    svgStats.append('g').classed('lines', true);
-    var polyline = svgStats.select('.lines')
-        .selectAll('polyline')
+        .append("path")
+        .attr("d", arc)
+        .attr("fill", (d, i) => color(i));
+    svgStats.append("g").classed("labels", true);
+    svgStats.append("g").classed("lines", true);
+
+    var polyline = svgStats.select(".lines")
+        .selectAll("polyline")
         .data(pie(data))
-        .enter().append('polyline')
-        .attr('points', function (d) {
+        .enter().append("polyline")
+        .style("opacity", 1)
+        .style("stroke", axisTextColor)
+        .style("stroke-width", 3)
+        .attr("points", function (d) {
             var pos = outerArc.centroid(d);
             pos[0] = radius * 0.95 * (midAngle(d) < Math.PI ? 1 : -1);
             return [arc.centroid(d), outerArc.centroid(d), pos]
         });
-    var label = svgStats.select('.labels').selectAll('text')
+
+    var label = svgStats.select(".labels").selectAll("text")
         .data(pie(data))
-        .enter().append('text')
-        .attr('dy', '.35em')
-        .html(function (d) {
-            return d.data;
-        })
-        .attr('transform', function (d) {
+        .enter().append("text")
+        .attr("dy", ".35em")
+        .attr("font-weight", 700)
+        .attr("fill", textColor)
+        .text(function (d,i) { return d.data + " " + aggregateDict[i].key; })
+        .attr("transform", function (d) {
             var pos = outerArc.centroid(d);
             pos[0] = radius * 0.95 * (midAngle(d) < Math.PI ? 1 : -1);
-            return 'translate(' + pos + ')';
+            return "translate(" + pos + ")";
         })
-        .style('text-anchor', function (d) {
-            return (midAngle(d)) < Math.PI ? 'start' : 'end';
+        .style("text-anchor", function (d) {
+            return (midAngle(d)) < Math.PI ? "start" : "end";
         });
-    svgStats.append('text')
-        .attr('class', 'toolCircle')
-        .attr('dy', -15) // Can adjust this to adjust text vertical alignment in tooltip
-        .html('Launch status')
-        .style('font-size', '.9em')
-        .style('text-anchor', 'middle');
+
+    // Text for the name of the donut chart + a text for the total number of elements
+    svgStats.append("text")
+        .attr("class", "centerText")
+        .attr("dy", -10) // Can adjust this to adjust text vertical alignment in tooltip
+        .attr("font-weight", 700)
+        .attr("fill", textColor)
+        .text("Launch status")
+        .style("font-size", "1.2em")
+        .style("text-anchor", "middle");
+    svgStats.append("text")
+        .attr("class", "centerText2")
+        .attr("dy", 20) // Can adjust this to adjust text vertical alignment in tooltip
+        .attr("font-weight", 700)
+        .attr("fill", textColor)
+        .text(function() { return "total: " + data.reduce((a, b) => a + b, 0); })
+        .style("font-size", "1.2em")
+        .style("text-anchor", "middle");
 
     function midAngle(d) { return d.startAngle + (d.endAngle - d.startAngle) / 2; }
 }
@@ -423,47 +439,48 @@ function drawDonutLsp(json) {
         .outerRadius(radius * 0.9)
         .innerRadius(radius * 0.9);
     svgStats.attr("transform", "translate(" + widthStatBlock / 2 + "," + heightStatBlock / 2 + ")");
-    svgStats.selectAll('path')
+    svgStats.selectAll("path")
         .data(pie(data))
         .enter()
-        .append('path')
-        .attr('d', arc)
-        .attr('fill', (d, i) => color(i));
-    svgStats.append('g').classed('labels', true);
-    svgStats.append('g').classed('lines', true);
-    var polyline = svgStats.select('.lines')
-        .selectAll('polyline')
+        .append("path")
+        .attr("d", arc)
+        .attr("fill", (d, i) => color(i));
+    svgStats.append("g").classed("labels", true);
+    svgStats.append("g").classed("lines", true);
+    var polyline = svgStats.select(".lines")
+        .selectAll("polyline")
         .data(pie(data))
-        .enter().append('polyline')
-        .attr('points', function (d) {
+        .enter().append("polyline")
+        .attr("points", function (d) {
             var pos = outerArc.centroid(d);
             pos[0] = radius * 0.95 * (midAngle(d) < Math.PI ? 1 : -1);
             return [arc.centroid(d), outerArc.centroid(d), pos]
         });
-    var label = svgStats.select('.labels').selectAll('text')
+    var label = svgStats.select(".labels").selectAll("text")
         .data(pie(data))
-        .enter().append('text')
-        .attr('dy', '.35em')
+        .enter().append("text")
+        .attr("dy", ".35em")
         .html(function (d) {
             return d.data;
         })
-        .attr('transform', function (d) {
+        .attr("transform", function (d) {
             var pos = outerArc.centroid(d);
             pos[0] = radius * 0.95 * (midAngle(d) < Math.PI ? 1 : -1);
-            return 'translate(' + pos + ')';
+            return "translate(" + pos + ")";
         })
-        .style('text-anchor', function (d) {
-            return (midAngle(d)) < Math.PI ? 'start' : 'end';
+        .style("text-anchor", function (d) {
+            return (midAngle(d)) < Math.PI ? "start" : "end";
         });
-    svgStats.append('text')
-        .attr('class', 'toolCircle')
-        .attr('dy', -15) // Can adjust this to adjust text vertical alignment in tooltip
-        .html('Launch service provider')
-        .style('font-size', '.9em')
-        .style('text-anchor', 'middle');
+    svgStats.append("text")
+        .attr("class", "toolCircle")
+        .attr("dy", -15) // Can adjust this to adjust text vertical alignment in tooltip
+        .html("Launch service provider")
+        .style("font-size", ".9em")
+        .style("text-anchor", "middle");
 
     function midAngle(d) { return d.startAngle + (d.endAngle - d.startAngle) / 2; }
 }
+
 // Action to take on mouse click
 function barClick() {
     var svgLoading = d3.select(idToSelect[2]).append("svg")
@@ -475,9 +492,9 @@ function barClick() {
     svgLoading.append("text")
         .attr("id", "loadingtext")
         .attr("x", function (d) { return widthStatBlock / 2; })
-        .attr("y", function (d) { return heightStatBlock / 2; })
+        .attr("y", function (d) { return heightStatBlock / 2 - 50; })
         .style("text-anchor", "middle")
-        .attr("fill", loadingColor)
+        .attr("fill", textColor)
         .attr("opacity", 1)
         .attr("font-size", "1.5em")
         .text(loadingText);
@@ -486,16 +503,16 @@ function barClick() {
     var radius = spinnerRadius;
     var tau = 2 * Math.PI;
     var arc = d3.arc()
-        .innerRadius(radius * 0.5)
-        .outerRadius(radius * 0.6)
+        .innerRadius(radius * 0.4)
+        .outerRadius(radius * 0.5)
         .startAngle(0);
     var spinner = svgLoading.append("g")
-        .attr("transform", "translate(" + widthStatBlock / 2 + "," + (heightStatBlock / 2 + 80) + ")")
+        .attr("transform", "translate(" + widthStatBlock / 2 + "," + (heightStatBlock / 2) + ")")
         .attr("id", "spinner")
         .attr("opacity", 0.9)
     var background = spinner.append("path")
         .datum({ endAngle: 0.75 * tau })
-        .style("fill", loadingColor)
+        .style("fill", textColor)
         .attr("d", arc)
         .call(spin, 1500)
     function spin(selection, duration) {
