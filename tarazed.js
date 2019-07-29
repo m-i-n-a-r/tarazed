@@ -1,16 +1,17 @@
 // Separate script to render the visualization
 // D3 is imported in the html file, where this script is executed
-
-const firstLaunchYear = 1961;
-
 // Some useful variables, all in the same place to simplify the configuration
 var idToSelect = ["#tarazed1", "#tarazed2", "#tarazed3", "#tarazed4"];
 var margin = { top: 20, right: 20, bottom: 60, left: 50 },
     width = 1800 - margin.left - margin.right,
-    height = 600 - margin.top - margin.bottom;
+    height = 600 - margin.top - margin.bottom,
+    widthTotal = 1800,
+    heightTotal = 600;
 var marginStatBlock = { top: 20, right: 20, bottom: 30, left: 40 },
     widthStatBlock = 600 - marginStatBlock.left - marginStatBlock.right,
-    heightStatBlock = 300 - marginStatBlock.top - marginStatBlock.bottom;
+    heightStatBlock = 300 - marginStatBlock.top - marginStatBlock.bottom,
+    widthStatBlockTotal = 600,
+    heightStatBlockTotal = 300;
 var x = d3.scaleBand()
     .range([0, width])
     .padding(0.1);
@@ -36,13 +37,13 @@ var locationAggregatedData;
 // The main containers, they should scale to fit the screen div size
 var svg = d3.select(idToSelect[0]).append("svg")
     .attr("preserveAspectRatio", "xMinYMin meet")
-    .attr("viewBox", "0 0 " + (width + margin.left + margin.right) + " " + (height + margin.top + margin.bottom))
+    .attr("viewBox", "0 0 " + widthTotal + " " + heightTotal)
 
 // A loading text
 svg.append("text")
     .attr("id", "loadingtext")
-    .attr("x", function (d) { return width / 2; })
-    .attr("y", function (d) { return height / 2; })
+    .attr("x", function (d) { return widthTotal / 2; })
+    .attr("y", function (d) { return heightTotal / 2; })
     .style("text-anchor", "middle")
     .attr("fill", textColor)
     .attr("opacity", 1)
@@ -57,7 +58,7 @@ var arc = d3.arc()
     .outerRadius(radius * 0.9)
     .startAngle(0);
 var spinner = svg.append("g")
-    .attr("transform", "translate(" + width / 2 + "," + (height / 2 + 80) + ")")
+    .attr("transform", "translate(" + widthTotal / 2 + "," + (heightTotal / 2 + 80) + ")")
     .attr("id", "spinner")
     .attr("opacity", 0.9)
 var background = spinner.append("path")
@@ -176,6 +177,7 @@ function statusAggregateData(data) {
     // Aggregate data by status (completed/failed). The standard status value has a lot of different values
     statusAggregate = d3.nest()
         .key(function (d) { if (d.status == 1 || d.status == 3) return "complete";
+            if (d.status == 2) return "uncertain";
             else return "failed";
         })
         .rollup(function (v) { return v.length; })
@@ -255,8 +257,9 @@ function drawStats(mode, time) {
     d3.json(queryUrl, json => {
         // Chosen stats: total launches, location pie chart, lsp pie chart, failed launches vs completed launches
         drawDonutLocation(json);
+        drawGeneralStats(mode, time);
         drawDonutCompletedFailed(json);
-        drawDonutLsp(json);
+        //drawDonutLsp(json);
         // Remove the loading
         d3.select(".loading").remove();
     });
@@ -280,12 +283,12 @@ function drawDonutLocation(json) {
     var svgStats = d3.select(idToSelect[1]).append("svg")
         .attr("class", "stats")
         .attr("preserveAspectRatio", "xMinYMin meet")
-        .attr("viewBox", "0 0 " + (widthStatBlock + marginStatBlock.left + marginStatBlock.right) + " " + (heightStatBlock + marginStatBlock.top + marginStatBlock.bottom))
+        .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal)
         .append("g");
     var outerArc = d3.arc()
         .outerRadius(radius * 0.9)
         .innerRadius(radius * 0.9);
-    svgStats.attr("transform", "translate(" + widthStatBlock / 2 + "," + heightStatBlock / 2 + ")");
+    svgStats.attr("transform", "translate(" + widthStatBlockTotal / 2 + "," + heightStatBlockTotal / 2 + ")");
     svgStats.selectAll("path")
         .data(pie(data))
         .enter()
@@ -357,15 +360,15 @@ function drawDonutCompletedFailed(json) {
     var arc = d3.arc().innerRadius(radius * 0.85).outerRadius(radius * 0.65);
 
     // Select one of the 3 sub-areas of the stats
-    var svgStats = d3.select(idToSelect[2]).append("svg")
+    var svgStats = d3.select(idToSelect[3]).append("svg")
         .attr("class", "stats")
         .attr("preserveAspectRatio", "xMinYMin meet")
-        .attr("viewBox", "0 0 " + (widthStatBlock + marginStatBlock.left + marginStatBlock.right) + " " + (heightStatBlock + marginStatBlock.top + marginStatBlock.bottom))
+        .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal)
         .append("g");
     var outerArc = d3.arc()
         .outerRadius(radius * 0.9)
         .innerRadius(radius * 0.9);
-    svgStats.attr("transform", "translate(" + widthStatBlock / 2 + "," + heightStatBlock / 2 + ")");
+    svgStats.attr("transform", "translate(" + widthStatBlockTotal / 2 + "," + heightStatBlockTotal / 2 + ")");
     svgStats.selectAll("path")
         .data(pie(data))
         .enter()
@@ -440,12 +443,12 @@ function drawDonutLsp(json) {
     var svgStats = d3.select(idToSelect[3]).append("svg")
         .attr("class", "stats")
         .attr("preserveAspectRatio", "xMinYMin meet")
-        .attr("viewBox", "0 0 " + (widthStatBlock + marginStatBlock.left + marginStatBlock.right) + " " + (heightStatBlock + marginStatBlock.top + marginStatBlock.bottom))
+        .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal)
         .append("g");
     var outerArc = d3.arc()
         .outerRadius(radius * 0.9)
         .innerRadius(radius * 0.9);
-    svgStats.attr("transform", "translate(" + widthStatBlock / 2 + "," + heightStatBlock / 2 + ")");
+    svgStats.attr("transform", "translate(" + widthStatBlockTotal / 2 + "," + heightStatBlockTotal / 2 + ")");
     svgStats.selectAll("path")
         .data(pie(data))
         .enter()
@@ -503,6 +506,23 @@ function drawDonutLsp(json) {
         .style("text-anchor", "middle");
 }
 
+function drawGeneralStats(mode, time) {
+    var svgGeneralStats = d3.select(idToSelect[2]).append("svg")
+        .attr("class", "stats")
+        .attr("preserveAspectRatio", "xMinYMin meet")
+        .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal)
+
+    svgGeneralStats.append("text")
+        .attr("class", "generalStatsText")
+        .attr("dy", heightStatBlockTotal / 2)
+        .attr("dx", widthStatBlockTotal / 2) 
+        .attr("font-weight", 700)
+        .attr("fill", textColor)
+        .text(function () { return "Selected time: " + mode + " " + time; })
+        .style("font-size", "2em")
+        .style("text-anchor", "middle");
+}
+
 function midAngle(d) { return d.startAngle + (d.endAngle - d.startAngle) / 2; }
 
 // Action to take on mouse click
@@ -510,13 +530,13 @@ function barClick() {
     var svgLoading = d3.select(idToSelect[2]).append("svg")
     .attr("class", "loading")
     .attr("preserveAspectRatio", "xMinYMin meet")
-    .attr("viewBox", "0 0 " + (widthStatBlock + marginStatBlock.left + marginStatBlock.right) + " " + (heightStatBlock + marginStatBlock.top + marginStatBlock.bottom));
+    .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal);
 
     // A loading text
     svgLoading.append("text")
         .attr("id", "loadingtext")
-        .attr("x", function (d) { return widthStatBlock / 2; })
-        .attr("y", function (d) { return heightStatBlock / 2 - 50; })
+        .attr("x", function (d) { return widthStatBlockTotal / 2; })
+        .attr("y", function (d) { return heightStatBlockTotal / 2 - 50; })
         .style("text-anchor", "middle")
         .attr("fill", textColor)
         .attr("opacity", 1)
@@ -531,7 +551,7 @@ function barClick() {
         .outerRadius(radius * 0.5)
         .startAngle(0);
     var spinner = svgLoading.append("g")
-        .attr("transform", "translate(" + widthStatBlock / 2 + "," + (heightStatBlock / 2) + ")")
+        .attr("transform", "translate(" + widthStatBlockTotal / 2 + "," + (heightStatBlockTotal / 2) + ")")
         .attr("id", "spinner")
         .attr("opacity", 0.9)
     var background = spinner.append("path")
