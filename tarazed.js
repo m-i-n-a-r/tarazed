@@ -232,6 +232,7 @@ function drawChartAggregate(data) {
         .attr("dy", "-.55em")
         .attr("transform", "rotate(-90)")
         .attr("fill", axisTextColor)
+        .attr("font-weight", 700)
         .style("font-size", "1.8em");
 
     // Add the y Axis
@@ -241,6 +242,7 @@ function drawChartAggregate(data) {
         .call(d3.axisLeft(y))
         .selectAll("text")
         .attr("fill", axisTextColor)
+        .attr("font-weight", 700)
         .style("font-size", "1.8em");
 
 }
@@ -506,6 +508,7 @@ function drawDonutLsp(json) {
         .style("text-anchor", "middle");
 }
 
+// Draw some general statistics: selected time, total launches, most active lsp
 function drawGeneralStats(mode, time) {
     var svgGeneralStats = d3.select(idToSelect[2]).append("svg")
         .attr("class", "stats")
@@ -617,11 +620,12 @@ dataDim.on("change", updateData)
 
 // Update the data when the user selects a different radio button
 function updateData() {
-    // Remove any previous visualization
+    // Clean from any previous visualization
     d3.selectAll(".bar").remove();
     d3.selectAll(".axis").remove();
-    d3.selectAll("g").remove();
+    d3.selectAll(".stats").remove();
     d3.select(".loading").remove();
+    d3.selectAll("g").remove();
     
     var modes = document.getElementById("modes")
     var mode;
