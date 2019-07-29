@@ -243,7 +243,6 @@ function drawChartAggregate(data) {
 
 // Draw some stats and subplots for the chosen bar
 function drawStats(mode, time) {
-    d3.selectAll(".stats").remove();
     var startDate = time + "-01-01";
     var endDate;
 
@@ -251,10 +250,12 @@ function drawStats(mode, time) {
     if (mode == "decade") { endDate = (parseInt(time) + 9) + "-12-31"; }
     queryUrl = "https://launchlibrary.net/1.4/launch?mode=verbose&limit=9999&startdate=" + startDate + "&enddate=" + endDate;
     d3.json(queryUrl, json => {
+        d3.selectAll(".stats").remove(); // TODO avoid the "double donuts" bug when clicking fast
         // Chosen stats: total launches, location pie chart, lsp pie chart, failed launches vs completed launches
         drawDonutLocation(json);
         drawDonutCompletedFailed(json);
         drawDonutLsp(json);
+        // Remove the loading
         d3.select(".loading").remove();
     });
 }
@@ -478,15 +479,15 @@ function barClick() {
         .style("text-anchor", "middle")
         .attr("fill", loadingColor)
         .attr("opacity", 1)
-        .attr("font-size", "2em")
+        .attr("font-size", "1.5em")
         .text(loadingText);
 
     // A loading spinner
     var radius = spinnerRadius;
     var tau = 2 * Math.PI;
     var arc = d3.arc()
-        .innerRadius(radius * 0.6)
-        .outerRadius(radius * 0.8)
+        .innerRadius(radius * 0.5)
+        .outerRadius(radius * 0.6)
         .startAngle(0);
     var spinner = svgLoading.append("g")
         .attr("transform", "translate(" + widthStatBlock / 2 + "," + (heightStatBlock / 2 + 80) + ")")
@@ -528,17 +529,18 @@ function barClick() {
         .style("opacity", 1.0);
 }
 
-// Change the color on hover, change it back to normal on mouse out
+// Change the stroke on hover, change it back to normal on mouse out
 function barMouseover() {
     d3.select(this).transition("hoverBar")
+        .duration(300)
         .style("stroke", highlightColor)
         .style("stroke-width", 10)
 }
 
 function barMouseout() {
     d3.select(this).transition("outBar")
-        .style("stroke", "rgba(160, 160, 160, 0.0)")
-        .style("strokeWidth", 0)
+        .duration(300)
+        .style("stroke-width", 0)
 }
 
 function storeData(data) {
@@ -563,20 +565,14 @@ function updateData() {
     var modes = document.getElementById("modes")
     var mode;
     for (var i = 0; i < modes.length; i++) {
-        if (modes[i].checked) {
-            mode = modes[i].id;
-            if (mode == "decade") {
-                decadeAggregatedData = decadeAggregateData(storedData);
-                drawChartAggregate(decadeAggregatedData)
-            }
-            if (mode == "year") {
-                yearlyAggregatedData = yearlyAggregateData(storedData);
-                drawChartAggregate(yearlyAggregatedData)
-            }
-            if (mode == "month") {
-                monthlyAggregatedData = lspAggregateData(storedData);
-                drawChartAggregate(monthlyAggregatedData)
-            }
-        }
+        if (modes[i].checked) mode = modes[i].id;
+    }
+    if (mode == "decade") {
+        decadeAggregatedData = decadeAggregateData(storedData);
+        drawChartAggregate(decadeAggregatedData)
+    }
+    if (mode == "year") {
+        yearlyAggregatedData = yearlyAggregateData(storedData);
+        drawChartAggregate(yearlyAggregatedData)
     }
 }
