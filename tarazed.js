@@ -10,9 +10,9 @@ var margin = { top: 20, right: 20, bottom: 60, left: 50 },
     heightTotal = 600;
 var marginStatBlock = { top: 20, right: 20, bottom: 30, left: 40 },
     widthStatBlock = 600 - marginStatBlock.left - marginStatBlock.right,
-    heightStatBlock = 300 - marginStatBlock.top - marginStatBlock.bottom,
+    heightStatBlock = 330 - marginStatBlock.top - marginStatBlock.bottom,
     widthStatBlockTotal = 600,
-    heightStatBlockTotal = 300;
+    heightStatBlockTotal = 330;
 var x = d3.scaleBand()
     .range([0, width])
     .padding(0.1);
@@ -304,8 +304,8 @@ function drawDonutLocation(json) {
         .on("mouseover", donutMouseover)
         .append("g");
     var outerArc = d3.arc()
-        .outerRadius(radius * 0.85)
-        .innerRadius(radius * 0.85);
+        .outerRadius(radius * 0.95)
+        .innerRadius(radius * 0.95);
     svgStats.attr("transform", "translate(" + widthStatBlockTotal / 2 + "," + heightStatBlockTotal / 2 + ")");
     svgStats.selectAll("path")
         .data(pie(data))
@@ -321,27 +321,31 @@ function drawDonutLocation(json) {
         .data(pie(data))
         .enter().append("polyline")
         .style("opacity", 1)
-        .style("stroke", axisTextColor)
+        .style("stroke", (d, i) => color(i))
         .style("stroke-width", 3)
         .attr("points", function (d) {
             var pos = outerArc.centroid(d);
-            pos[0] = radius * 0.95 * (midAngle(d) < Math.PI ? 1 : -1);
+            pos[0] = radius * 1.05 * (midAngle(d) < Math.PI ? 1 : -1);
             return [arc.centroid(d), outerArc.centroid(d), pos]
         });
 
     var label = svgStats.select(".labels").selectAll("text")
         .data(pie(data))
         .enter().append("text")
+        .attr("x", function(d, i) {
+            var pos = outerArc.centroid(d);
+            pos[0] = radius * 1.10 * (midAngle(d) < Math.PI ? 1 : -1);
+            return pos[0];
+        })
+        .attr( "y", function(d, i) {
+            var pos = outerArc.centroid(d);
+            return pos[1];
+        })
         .attr("dy", ".35em")
         .attr("font-weight", 700)
         .attr("fill", textColor)
-        .style("font-size", ".8em")
+        .style("font-size", ".95em")
         .text(function (d, i) { return d.data + " - " + aggregateDict[i].key; })
-        .attr("transform", function (d) {
-            var pos = outerArc.centroid(d);
-            pos[0] = radius * 0.95 * (midAngle(d) < Math.PI ? 1 : -1);
-            return "translate(" + pos + ")";
-        })
         .style("text-anchor", function (d) {
             return (midAngle(d)) < Math.PI ? "start" : "end";
         });
@@ -356,26 +360,47 @@ function drawDonutLocation(json) {
         .style("font-size", "1.2em")
         .style("text-anchor", "middle");
 
-    // Avoid overlapping labels
+    // Avoid overlapping labels 
     var labels = label._groups[0];
+    var alpha = 0.3,
+        spacing = 20;
 
-    for (let i = 0; i < labels.length; i++) {
-        for (let j = i + 1; j < labels.length; j++) {
-            const previous = labels[i];
-            const elem = labels[j];
-            const thisbb = elem.getBoundingClientRect(),
-                prevbb = previous.getBoundingClientRect();
-            if (!(thisbb.right < prevbb.left ||
-                thisbb.left > prevbb.right ||
-                thisbb.bottom < prevbb.top ||
-                thisbb.top > prevbb.bottom)) {
-                const matrix = previous.transform.baseVal.consolidate().matrix;
-                d3.select(elem).attr('transform', `translate(${matrix.e}, ${matrix.f + prevbb.bottom - prevbb.top + 5})`);
-            }
-            const elemMatrix = elem.transform.baseVal.consolidate().matrix;
-            pie(data)[j].pos = [elemMatrix.e, elemMatrix.f];
+    function relax() {
+        var again = false;
+        label.each(function(d, i) {
+             var a = this,
+                 da = d3.select(a),
+                 y1 = da.attr("y");
+                 x1 = da.attr("x");
+              label.each(function(d, j) {
+                  var b = this;
+                  if (a === b) return;               
+                  db = d3.select(b);
+                  if (da.attr("text-anchor") !== db.attr("text-anchor")) return;
+                  var y2 = db.attr("y");
+                  var x2 = db.attr("x");
+                  if (x1 != x2) return;
+                  deltaY = y1 - y2;
+                  if (Math.abs(deltaY) > spacing) return;
+                  again = true;
+                  sign = deltaY > 0? 1: -1;
+                  var adjust = sign * alpha;
+                  da.attr("y", +y1 + adjust);
+                  db.attr("y", +y2 - adjust);
+              });
+        });
+        
+        if (again) {
+            //var labelElements = labels;
+            //polyline.attr("y2", function(d, i) {
+            //    var labelForLine = d3.select(labelElements[i]);
+            //    return labelForLine.attr("y");
+            //});
+            setTimeout(relax, 20);
         }
     }
+
+    relax();
 }
 
 function drawDonutCompletedFailed(json) {
@@ -399,8 +424,8 @@ function drawDonutCompletedFailed(json) {
         .on("mouseover", donutMouseover)
         .append("g");
     var outerArc = d3.arc()
-        .outerRadius(radius * 0.85)
-        .innerRadius(radius * 0.85);
+        .outerRadius(radius * 0.95)
+        .innerRadius(radius * 0.95);
     svgStats.attr("transform", "translate(" + widthStatBlockTotal / 2 + "," + heightStatBlockTotal / 2 + ")");
     svgStats.selectAll("path")
         .data(pie(data))
@@ -416,11 +441,11 @@ function drawDonutCompletedFailed(json) {
         .data(pie(data))
         .enter().append("polyline")
         .style("opacity", 1)
-        .style("stroke", axisTextColor)
+        .style("stroke", (d, i) => color(i))
         .style("stroke-width", 3)
         .attr("points", function (d) {
             var pos = outerArc.centroid(d);
-            pos[0] = radius * 0.95 * (midAngle(d) < Math.PI ? 1 : -1);
+            pos[0] = radius * 1.05 * (midAngle(d) < Math.PI ? 1 : -1);
             return [arc.centroid(d), outerArc.centroid(d), pos]
         });
 
@@ -434,7 +459,7 @@ function drawDonutCompletedFailed(json) {
         .text(function (d, i) { return d.data + " " + aggregateDict[i].key; })
         .attr("transform", function (d) {
             var pos = outerArc.centroid(d);
-            pos[0] = radius * 0.95 * (midAngle(d) < Math.PI ? 1 : -1);
+            pos[0] = radius * 1.10 * (midAngle(d) < Math.PI ? 1 : -1);
             return "translate(" + pos + ")";
         })
         .style("text-anchor", function (d) {
