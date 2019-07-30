@@ -1,6 +1,7 @@
 // Separate script to render the visualization
 // D3 is imported in the html file, where this script is executed
 // Some useful variables, all in the same place to simplify the configuration
+
 var idToSelect = ["#tarazed1", "#tarazed2", "#tarazed3", "#tarazed4"];
 var margin = { top: 20, right: 20, bottom: 60, left: 50 },
     width = 1800 - margin.left - margin.right,
@@ -156,7 +157,7 @@ function lspAggregateData(data) {
     const launches = data.launches;
     // Aggregate data by launch service provider
     lspAggregate = d3.nest()
-        .key(function (d) { return d.lsp.abbrev; })
+        .key(function (d) { return d.lsp.name; })
         .rollup(function (v) { return v.length; })
         .entries(launches);
     return lspAggregate;
@@ -259,9 +260,8 @@ function drawStats(mode, time) {
     d3.json(queryUrl, json => {
         // Chosen stats: total launches, location pie chart, lsp pie chart, failed launches vs completed launches
         drawDonutLocation(json);
-        drawGeneralStats(mode, time);
+        drawGeneralStats(json, mode, time);
         drawDonutCompletedFailed(json);
-        //drawDonutLsp(json);
         // Remove the loading
         d3.select(".loading").remove();
     });
@@ -332,18 +332,10 @@ function drawDonutLocation(json) {
     // Text for the name of the donut chart + a text for the total number of elements
     svgStats.append("text")
         .attr("class", "centerText")
-        .attr("dy", -10) // Can adjust this to adjust text vertical alignment in tooltip
+        .attr("dy", 0) // Can adjust this to adjust text vertical alignment in tooltip
         .attr("font-weight", 700)
         .attr("fill", textColor)
         .text("Launch location")
-        .style("font-size", "1.2em")
-        .style("text-anchor", "middle");
-    svgStats.append("text")
-        .attr("class", "centerText2")
-        .attr("dy", 20) // Can adjust this to adjust text vertical alignment in tooltip
-        .attr("font-weight", 700)
-        .attr("fill", textColor)
-        .text(function() { return "total: " + data.reduce((a, b) => a + b, 0); })
         .style("font-size", "1.2em")
         .style("text-anchor", "middle");
 }
@@ -412,104 +404,22 @@ function drawDonutCompletedFailed(json) {
     // Text for the name of the donut chart + a text for the total number of elements
     svgStats.append("text")
         .attr("class", "centerText")
-        .attr("dy", -10) // Can adjust this to adjust text vertical alignment in tooltip
+        .attr("dy", 0) // Can adjust this to adjust text vertical alignment in tooltip
         .attr("font-weight", 700)
         .attr("fill", textColor)
         .text("Launch status")
         .style("font-size", "1.2em")
         .style("text-anchor", "middle");
-    svgStats.append("text")
-        .attr("class", "centerText2")
-        .attr("dy", 20) // Can adjust this to adjust text vertical alignment in tooltip
-        .attr("font-weight", 700)
-        .attr("fill", textColor)
-        .text(function() { return "total: " + data.reduce((a, b) => a + b, 0); })
-        .style("font-size", "1.2em")
-        .style("text-anchor", "middle");
-}
-
-function drawDonutLsp(json) {
-    var radius = Math.min(widthStatBlock, heightStatBlock) / 2;
-    // Get an array of numbers from a dynamical query to the site
-    aggregateDict = lspAggregateData(json);
-    var data = [];
-    for (key in aggregateDict) data.push(aggregateDict[key].value)
-    var color = d3.scaleOrdinal()
-        .domain(data)
-        // Colors used in the donut chart
-        .range(["#a63fa1", "#ca7b49", "#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#aaaaaa"])
-    var pie = d3.pie().sort(null).value(d => d);
-    var arc = d3.arc().innerRadius(radius * 0.85).outerRadius(radius * 0.65);
-
-    // Select one of the 3 sub-areas of the stats
-    var svgStats = d3.select(idToSelect[3]).append("svg")
-        .attr("class", "stats")
-        .attr("preserveAspectRatio", "xMinYMin meet")
-        .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal)
-        .append("g");
-    var outerArc = d3.arc()
-        .outerRadius(radius * 0.9)
-        .innerRadius(radius * 0.9);
-    svgStats.attr("transform", "translate(" + widthStatBlockTotal / 2 + "," + heightStatBlockTotal / 2 + ")");
-    svgStats.selectAll("path")
-        .data(pie(data))
-        .enter()
-        .append("path")
-        .attr("d", arc)
-        .attr("fill", (d, i) => color(i));
-    svgStats.append("g").classed("labels", true);
-    svgStats.append("g").classed("lines", true);
-
-    var polyline = svgStats.select(".lines")
-        .selectAll("polyline")
-        .data(pie(data))
-        .enter().append("polyline")
-        .style("opacity", 1)
-        .style("stroke", axisTextColor)
-        .style("stroke-width", 3)
-        .attr("points", function (d) {
-            var pos = outerArc.centroid(d);
-            pos[0] = radius * 0.95 * (midAngle(d) < Math.PI ? 1 : -1);
-            return [arc.centroid(d), outerArc.centroid(d), pos]
-        });
-
-    var label = svgStats.select(".labels").selectAll("text")
-        .data(pie(data))
-        .enter().append("text")
-        .attr("dy", ".35em")
-        .attr("font-weight", 700)
-        .attr("fill", textColor)
-        .text(function (d,i) { return d.data + " " + aggregateDict[i].key; })
-        .attr("transform", function (d) {
-            var pos = outerArc.centroid(d);
-            pos[0] = radius * 0.95 * (midAngle(d) < Math.PI ? 1 : -1);
-            return "translate(" + pos + ")";
-        })
-        .style("text-anchor", function (d) {
-            return (midAngle(d)) < Math.PI ? "start" : "end";
-        });
-
-    // Text for the name of the donut chart + a text for the total number of elements
-    svgStats.append("text")
-        .attr("class", "centerText")
-        .attr("dy", -10) // Can adjust this to adjust text vertical alignment in tooltip
-        .attr("font-weight", 700)
-        .attr("fill", textColor)
-        .text("Launch SP")
-        .style("font-size", "1.2em")
-        .style("text-anchor", "middle");
-    svgStats.append("text")
-        .attr("class", "centerText2")
-        .attr("dy", 20) // Can adjust this to adjust text vertical alignment in tooltip
-        .attr("font-weight", 700)
-        .attr("fill", textColor)
-        .text(function() { return "total: " + data.reduce((a, b) => a + b, 0); })
-        .style("font-size", "1.2em")
-        .style("text-anchor", "middle");
 }
 
 // Draw some general statistics: selected time, total launches, most active lsp
-function drawGeneralStats(mode, time) {
+function drawGeneralStats(json, mode, time) {
+    aggregateDict = lspAggregateData(json);
+    var data = [];
+    for (key in aggregateDict) data.push(aggregateDict[key].value);
+    var bestObj = Math.max.apply(Math,aggregateDict.map(function (o) {return o.value; }));
+    var bestLsp = aggregateDict.find(function (o) { return o.value == bestObj; });
+
     var svgGeneralStats = d3.select(idToSelect[2]).append("svg")
         .attr("class", "stats")
         .attr("preserveAspectRatio", "xMinYMin meet")
@@ -517,12 +427,42 @@ function drawGeneralStats(mode, time) {
 
     svgGeneralStats.append("text")
         .attr("class", "generalStatsText")
-        .attr("dy", heightStatBlockTotal / 2)
+        .attr("dy", heightStatBlockTotal / 2 - 50)
         .attr("dx", widthStatBlockTotal / 2) 
         .attr("font-weight", 700)
         .attr("fill", textColor)
         .text(function () { return "Selected time: " + mode + " " + time; })
         .style("font-size", "2em")
+        .style("text-anchor", "middle");
+
+    svgGeneralStats.append("text")
+        .attr("class", "generalStatsText")
+        .attr("dy", heightStatBlockTotal / 2 - 10)
+        .attr("dx", widthStatBlockTotal / 2) 
+        .attr("font-weight", 700)
+        .attr("fill", textColor)
+        .text(function () { return "Total launches: " + data.reduce((a, b) => a + b, 0); })
+        .style("font-size", "1.2em")
+        .style("text-anchor", "middle");
+
+    svgGeneralStats.append("text")
+        .attr("class", "generalStatsText")
+        .attr("dy", heightStatBlockTotal / 2 + 50)
+        .attr("dx", widthStatBlockTotal / 2) 
+        .attr("font-weight", 700)
+        .attr("fill", textColor)
+        .text(function () { return "Best LSP: " + bestLsp.key })
+        .style("font-size", "1.2em")
+        .style("text-anchor", "middle");
+
+    svgGeneralStats.append("text")
+        .attr("class", "generalStatsText")
+        .attr("dy", heightStatBlockTotal / 2 + 80)
+        .attr("dx", widthStatBlockTotal / 2) 
+        .attr("font-weight", 700)
+        .attr("fill", textColor)
+        .text(function () { return "with " + bestLsp.value + " launches completed"; })
+        .style("font-size", "1.2em")
         .style("text-anchor", "middle");
 }
 
@@ -605,6 +545,14 @@ function barMouseout() {
     d3.select(this).transition("outBar")
         .duration(300)
         .style("stroke-width", 0)
+}
+
+function donutMouseover() {
+
+}
+
+function donutMouseout() {
+
 }
 
 function storeData(data) {
