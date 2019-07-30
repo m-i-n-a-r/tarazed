@@ -122,6 +122,19 @@ d3.json(finalPageUrl, json => {
         .remove();
     document.getElementById("modes").style.display = "block";
 
+    // Check internet connection
+    if (json == undefined || json == null) {
+        svg.append("text")
+            .attr("class", "noInternetText")
+            .attr("dy", heightTotal / 2 - 50)
+            .attr("dx", widthTotal / 2)
+            .attr("font-weight", 700)
+            .attr("fill", textColor)
+            .text("NO INTERNET CONNECTION!")
+            .style("font-size", "3em")
+            .style("text-anchor", "middle");
+
+    }
     // Store the data for future uses
     storeData(json);
 });
@@ -177,7 +190,8 @@ function statusAggregateData(data) {
     const launches = data.launches;
     // Aggregate data by status (completed/failed). The standard status value has a lot of different values
     statusAggregate = d3.nest()
-        .key(function (d) { if (d.status == 1 || d.status == 3) return "complete";
+        .key(function (d) {
+            if (d.status == 1 || d.status == 3) return "complete";
             if (d.status == 2) return "uncertain";
             else return "failed";
         })
@@ -274,11 +288,12 @@ function drawDonutLocation(json) {
     aggregateDict = locationAggregateData(json);
     var data = [];
     for (key in aggregateDict) data.push(aggregateDict[key].value)
+
     var color = d3.scaleOrdinal()
         .domain(data)
         // Colors used in the donut chart
         .range(["#a63fa1", "#ca7b49", "#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#aaaaaa"])
-    var pie = d3.pie().sort(null).value(d => d);
+    var pie = d3.pie().startAngle(-0.3 * Math.PI).value(d => d);
     var arc = d3.arc().innerRadius(radius * 0.85).outerRadius(radius * 0.65);
 
     // Select one of the 3 sub-areas of the stats
@@ -289,8 +304,8 @@ function drawDonutLocation(json) {
         .on("mouseover", donutMouseover)
         .append("g");
     var outerArc = d3.arc()
-        .outerRadius(radius * 0.9)
-        .innerRadius(radius * 0.9);
+        .outerRadius(radius * 0.85)
+        .innerRadius(radius * 0.85);
     svgStats.attr("transform", "translate(" + widthStatBlockTotal / 2 + "," + heightStatBlockTotal / 2 + ")");
     svgStats.selectAll("path")
         .data(pie(data))
@@ -320,7 +335,8 @@ function drawDonutLocation(json) {
         .attr("dy", ".35em")
         .attr("font-weight", 700)
         .attr("fill", textColor)
-        .text(function (d,i) { return d.data + " " + aggregateDict[i].key; })
+        .style("font-size", ".8em")
+        .text(function (d, i) { return d.data + " - " + aggregateDict[i].key; })
         .attr("transform", function (d) {
             var pos = outerArc.centroid(d);
             pos[0] = radius * 0.95 * (midAngle(d) < Math.PI ? 1 : -1);
@@ -339,6 +355,27 @@ function drawDonutLocation(json) {
         .text("Launch location")
         .style("font-size", "1.2em")
         .style("text-anchor", "middle");
+
+    // Avoid overlapping labels
+    var labels = label._groups[0];
+
+    for (let i = 0; i < labels.length; i++) {
+        for (let j = i + 1; j < labels.length; j++) {
+            const previous = labels[i];
+            const elem = labels[j];
+            const thisbb = elem.getBoundingClientRect(),
+                prevbb = previous.getBoundingClientRect();
+            if (!(thisbb.right < prevbb.left ||
+                thisbb.left > prevbb.right ||
+                thisbb.bottom < prevbb.top ||
+                thisbb.top > prevbb.bottom)) {
+                const matrix = previous.transform.baseVal.consolidate().matrix;
+                d3.select(elem).attr('transform', `translate(${matrix.e}, ${matrix.f + prevbb.bottom - prevbb.top + 5})`);
+            }
+            const elemMatrix = elem.transform.baseVal.consolidate().matrix;
+            pie(data)[j].pos = [elemMatrix.e, elemMatrix.f];
+        }
+    }
 }
 
 function drawDonutCompletedFailed(json) {
@@ -362,8 +399,8 @@ function drawDonutCompletedFailed(json) {
         .on("mouseover", donutMouseover)
         .append("g");
     var outerArc = d3.arc()
-        .outerRadius(radius * 0.9)
-        .innerRadius(radius * 0.9);
+        .outerRadius(radius * 0.85)
+        .innerRadius(radius * 0.85);
     svgStats.attr("transform", "translate(" + widthStatBlockTotal / 2 + "," + heightStatBlockTotal / 2 + ")");
     svgStats.selectAll("path")
         .data(pie(data))
@@ -393,7 +430,8 @@ function drawDonutCompletedFailed(json) {
         .attr("dy", ".35em")
         .attr("font-weight", 700)
         .attr("fill", textColor)
-        .text(function (d,i) { return d.data + " " + aggregateDict[i].key; })
+        .style("font-size", "1.1em")
+        .text(function (d, i) { return d.data + " " + aggregateDict[i].key; })
         .attr("transform", function (d) {
             var pos = outerArc.centroid(d);
             pos[0] = radius * 0.95 * (midAngle(d) < Math.PI ? 1 : -1);
@@ -419,7 +457,7 @@ function drawGeneralStats(json, mode, time) {
     aggregateDict = lspAggregateData(json);
     var data = [];
     for (key in aggregateDict) data.push(aggregateDict[key].value);
-    var bestObj = Math.max.apply(Math,aggregateDict.map(function (o) {return o.value; }));
+    var bestObj = Math.max.apply(Math, aggregateDict.map(function (o) { return o.value; }));
     var bestLsp = aggregateDict.find(function (o) { return o.value == bestObj; });
 
     var svgGeneralStats = d3.select(idToSelect[2]).append("svg")
@@ -430,7 +468,7 @@ function drawGeneralStats(json, mode, time) {
     svgGeneralStats.append("text")
         .attr("class", "generalStatsText")
         .attr("dy", heightStatBlockTotal / 2 - 50)
-        .attr("dx", widthStatBlockTotal / 2) 
+        .attr("dx", widthStatBlockTotal / 2)
         .attr("font-weight", 700)
         .attr("fill", textColor)
         .text(function () { return "Selected time: " + mode + " " + time; })
@@ -440,7 +478,7 @@ function drawGeneralStats(json, mode, time) {
     svgGeneralStats.append("text")
         .attr("class", "generalStatsText")
         .attr("dy", heightStatBlockTotal / 2 - 10)
-        .attr("dx", widthStatBlockTotal / 2) 
+        .attr("dx", widthStatBlockTotal / 2)
         .attr("font-weight", 700)
         .attr("fill", textColor)
         .text(function () { return "Total launches: " + data.reduce((a, b) => a + b, 0); })
@@ -450,7 +488,7 @@ function drawGeneralStats(json, mode, time) {
     svgGeneralStats.append("text")
         .attr("class", "generalStatsText")
         .attr("dy", heightStatBlockTotal / 2 + 50)
-        .attr("dx", widthStatBlockTotal / 2) 
+        .attr("dx", widthStatBlockTotal / 2)
         .attr("font-weight", 700)
         .attr("fill", textColor)
         .text(function () { return "Best LSP: " + bestLsp.key })
@@ -460,7 +498,7 @@ function drawGeneralStats(json, mode, time) {
     svgGeneralStats.append("text")
         .attr("class", "generalStatsText")
         .attr("dy", heightStatBlockTotal / 2 + 80)
-        .attr("dx", widthStatBlockTotal / 2) 
+        .attr("dx", widthStatBlockTotal / 2)
         .attr("font-weight", 700)
         .attr("fill", textColor)
         .text(function () { return "with " + bestLsp.value + " launches completed"; })
@@ -473,9 +511,9 @@ function midAngle(d) { return d.startAngle + (d.endAngle - d.startAngle) / 2; }
 // Action to take on mouse click
 function barClick() {
     var svgLoading = d3.select(idToSelect[2]).append("svg")
-    .attr("class", "loading")
-    .attr("preserveAspectRatio", "xMinYMin meet")
-    .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal);
+        .attr("class", "loading")
+        .attr("preserveAspectRatio", "xMinYMin meet")
+        .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal);
 
     // A loading text
     svgLoading.append("text")
@@ -551,13 +589,12 @@ function barMouseout() {
 
 function donutMouseover() {
     d3.selectAll(".centerText").transition("modeDown")
-    .duration(500)
-    .attr("dy", 10)
-    .transition("moveUp")
-    .duration(200)
-    .attr("dy", 0)
+        .duration(500)
+        .attr("dy", 10)
+        .transition("moveUp")
+        .duration(200)
+        .attr("dy", 0)
 }
-
 
 function storeData(data) {
     storedData = data;
@@ -578,7 +615,7 @@ function updateData() {
     d3.selectAll(".stats").remove();
     d3.select(".loading").remove();
     d3.selectAll("g").remove();
-    
+
     var modes = document.getElementById("modes")
     var mode;
     for (var i = 0; i < modes.length; i++) {
