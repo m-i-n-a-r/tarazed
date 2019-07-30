@@ -19,5 +19,8 @@ Approximately, there are **2000 launches**, **250 agencies** and a time window o
 - The sources are easy to **customize** and understand
 - A beautiful **page template** to display the graph [SOON!]
 
+## Screenshot
+![Basic layout without the page template](screenshot.png?raw=true "Basic Tarazed layout")
+
 ## How to
 Just clone the repo! You can use it as it is (use an http local server running the command `python -m http.server 8080`), or import the script and the css in another html page: make sure to add 4 `div`s with the correct id (it must match the `idToSelect` variable in the js file). The customizable variables are in the script iteself. 
