@@ -286,6 +286,7 @@ function drawDonutLocation(json) {
         .attr("class", "stats")
         .attr("preserveAspectRatio", "xMinYMin meet")
         .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal)
+        .on("mouseover", donutMouseover)
         .append("g");
     var outerArc = d3.arc()
         .outerRadius(radius * 0.9)
@@ -358,6 +359,7 @@ function drawDonutCompletedFailed(json) {
         .attr("class", "stats")
         .attr("preserveAspectRatio", "xMinYMin meet")
         .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal)
+        .on("mouseover", donutMouseover)
         .append("g");
     var outerArc = d3.arc()
         .outerRadius(radius * 0.9)
@@ -548,12 +550,14 @@ function barMouseout() {
 }
 
 function donutMouseover() {
-
+    d3.selectAll(".centerText").transition("modeDown")
+    .duration(500)
+    .attr("dy", 10)
+    .transition("moveUp")
+    .duration(200)
+    .attr("dy", 0)
 }
 
-function donutMouseout() {
-
-}
 
 function storeData(data) {
     storedData = data;
