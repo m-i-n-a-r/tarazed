@@ -361,8 +361,8 @@ function drawDonutLocation(json) {
         .style("text-anchor", "middle");
 
     // Avoid overlapping labels 
-    var labels = label._groups[0];
-    var alpha = 0.3,
+    var labels = label._groups[0],
+        alpha = 0.3,
         spacing = 20;
 
     function relax() {
@@ -391,15 +391,20 @@ function drawDonutLocation(json) {
         });
         
         if (again) {
-            //var labelElements = labels;
-            //polyline.attr("y2", function(d, i) {
-            //    var labelForLine = d3.select(labelElements[i]);
-            //    return labelForLine.attr("y");
-            //});
+            var labelElements = labels;
+            // Pos[0] means the x coordinate of the pos point
+            polyline.attr("points", function (d,i) {
+                var pos = outerArc.centroid(d);
+                pos[0] = radius * 1.05 * (midAngle(d) < Math.PI ? 1 : -1);
+                var labelForLine = d3.select(labelElements[i]);
+                pos[1] = labelForLine.attr("y");
+                var pos2 = outerArc.centroid(d);
+                pos2[1] = labelForLine.attr("y");
+                return [arc.centroid(d), pos2, pos]
+            });
             setTimeout(relax, 20);
         }
     }
-
     relax();
 }
 
@@ -548,15 +553,15 @@ function barClick() {
         .style("text-anchor", "middle")
         .attr("fill", textColor)
         .attr("opacity", 1)
-        .attr("font-size", "1.5em")
+        .attr("font-size", "2em")
         .text(loadingText);
 
     // A loading spinner
     var radius = spinnerRadius;
     var tau = 2 * Math.PI;
     var arc = d3.arc()
-        .innerRadius(radius * 0.4)
-        .outerRadius(radius * 0.5)
+        .innerRadius(radius * 0.45)
+        .outerRadius(radius * 0.55)
         .startAngle(0);
     var spinner = svgLoading.append("g")
         .attr("transform", "translate(" + widthStatBlockTotal / 2 + "," + (heightStatBlockTotal / 2) + ")")
