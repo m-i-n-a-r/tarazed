@@ -266,7 +266,7 @@ function drawChartAggregate(data) {
 function drawStats(mode, time) {
     var startDate = time + "-01-01";
     var endDate;
-    d3.selectAll(".stats").remove(); // TODO avoid the "double donuts" bug when clicking fast
+    d3.selectAll(".stats").remove();
 
     if (mode == "year") { endDate = time + "-12-31"; }
     if (mode == "decade") { endDate = (parseInt(time) + 9) + "-12-31"; }
@@ -274,10 +274,12 @@ function drawStats(mode, time) {
     d3.json(queryUrl, json => {
         // Chosen stats: total launches, location pie chart, lsp pie chart, failed launches vs completed launches
         drawDonutLocation(json);
-        drawGeneralStats(json, mode, time);
         drawDonutCompletedFailed(json);
+        drawGeneralStats(json, mode, time);
         // Remove the loading
         d3.select(".loading").remove();
+        // Reactivate the click events
+        d3.selectAll(".bar").on("click", barClick);
     });
 }
 
@@ -512,7 +514,7 @@ function drawGeneralStats(json, mode, time) {
         .attr("font-weight", 700)
         .attr("fill", textColor)
         .text(function () { return "Total launches: " + data.reduce((a, b) => a + b, 0); })
-        .style("font-size", "1.2em")
+        .style("font-size", "1.6em")
         .style("text-anchor", "middle");
 
     svgGeneralStats.append("text")
@@ -540,6 +542,9 @@ function midAngle(d) { return d.startAngle + (d.endAngle - d.startAngle) / 2; }
 
 // Action to take on mouse click
 function barClick() {
+    // Disable the click while processing to avoid multiple stats
+    d3.selectAll(".bar").on("click", null);
+
     var svgLoading = d3.select(idToSelect[2]).append("svg")
         .attr("class", "loading")
         .attr("preserveAspectRatio", "xMinYMin meet")
