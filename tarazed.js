@@ -20,7 +20,6 @@ var y = d3.scaleLinear()
     .range([height, 0]);
 var textColor = "#aaaaaa";
 var futureEntriesColor = "rgba(160, 160, 160, 0.6)";
-var axisTextColor = "#333";
 var highlightColor = "#7da1e8";
 var loadingText = "...fetching results...";
 var spinnerRadius = 50;
@@ -133,7 +132,6 @@ d3.json(finalPageUrl, json => {
             .text("NO INTERNET CONNECTION!")
             .style("font-size", "3em")
             .style("text-anchor", "middle");
-
     }
     // Store the data for future uses
     storeData(json);
@@ -246,7 +244,6 @@ function drawChartAggregate(data) {
         .attr("dx", "-.8em")
         .attr("dy", "-.55em")
         .attr("transform", "rotate(-90)")
-        .attr("fill", axisTextColor)
         .attr("font-weight", 700)
         .style("font-size", "1.8em");
 
@@ -256,10 +253,8 @@ function drawChartAggregate(data) {
         .attr("class", "axis")
         .call(d3.axisLeft(y))
         .selectAll("text")
-        .attr("fill", axisTextColor)
         .attr("font-weight", 700)
         .style("font-size", "1.8em");
-
 }
 
 // Draw some stats and subplots for the chosen bar

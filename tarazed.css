@@ -46,10 +46,23 @@ h5 {
   display: none;
 }
 
-.divider{
+.divider {
   width: 30px;
   height: auto;
   display: inline-block;
+}
+
+/* Axes color */
+.axis line {
+    stroke:#555;
+}
+
+.axis path {
+    stroke:#555;
+}
+
+.axis text {
+    fill:#555;
 }
 
 /* Responsive stats */  
