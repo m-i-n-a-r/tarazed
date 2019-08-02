@@ -18,6 +18,7 @@ var x = d3.scaleBand()
     .padding(0.1);
 var y = d3.scaleLinear()
     .range([height, 0]);
+var maxDrawableStats = 100;
 var textColor = "#aaaaaa";
 var futureEntriesColor = "rgba(150, 150, 150, 0.8)";
 var highlightColor = "#7da1e8";
@@ -33,6 +34,7 @@ var yearlyAggregatedData;
 var monthlyAggregatedData;
 var lspAggregatedData;
 var locationAggregatedData;
+var drawedStats = 0;
 
 // The main containers, they should scale to fit the screen div size
 var svg = d3.select(idToSelect[0]).append("svg")
@@ -276,12 +278,14 @@ function drawChartAggregate(data, mode) {
 
 // Delete every visualized year/decade
 function resetStats() {
+    drawedStats = 0;
     d3.selectAll(".stats").transition("removeStats")
         .duration(1000) // This transition doesn't work atm (obviously)
         .attr("opacity", 0)
         .remove();
     d3.selectAll(".bar")
         .on("click", barClick)
+        .on("mouseover", barMouseover)
         .transition("deblink")
         .duration(200)
         .style("opacity", 1.0);
@@ -524,9 +528,9 @@ function drawGeneralStats(json, mode, time) {
         .attr("dy", heightStatBlockTotal / 2 - 50)
         .attr("dx", widthStatBlockTotal / 2)
         .attr("font-weight", 700)
-        .attr("fill", textColor)
-        .text(function () { return "Selected time: " + mode + " " + time; })
-        .style("font-size", "2em")
+        .attr("fill", highlightColor)
+        .text(function () { return (mode + " " + time).toUpperCase(); })
+        .style("font-size", "2.5em")
         .style("text-anchor", "middle");
 
     svgGeneralStats.append("text")
@@ -555,7 +559,7 @@ function drawGeneralStats(json, mode, time) {
         .attr("dx", widthStatBlockTotal / 2)
         .attr("font-weight", 700)
         .attr("fill", textColor)
-        .text(function () { return "with " + bestLsp.value + " launches completed"; })
+        .text(function () { return "with " + bestLsp.value + " scheduled launches"; })
         .style("font-size", "1.2em")
         .style("text-anchor", "middle");
 }
@@ -564,8 +568,14 @@ function midAngle(d) { return d.startAngle + (d.endAngle - d.startAngle) / 2; }
 
 // Action to take on mouse click
 function barClick() {
-    // Disable the click while processing to avoid multiple stats
-    d3.select(this).on("click", null);
+    // Disable the click on the already selected years/decades
+    d3.select(this)
+        .on("click", null)
+        .on("mouseover", null);
+
+    // Useful to draw only the right number of stats 
+    drawedStats++;
+    if(drawedStats >= maxDrawableStats) d3.selectAll(".bar").on("click", null);
 
     var svgLoading = d3.select(idToSelect[2]).append("svg")
         .attr("class", "loading")
