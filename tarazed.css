@@ -1,5 +1,9 @@
 /* Other useful styles */
 
+html {
+    overflow-y: scroll; 
+}
+
 body {
     font-size: 16px;
     color: #222;

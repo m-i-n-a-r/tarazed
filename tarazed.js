@@ -10,9 +10,9 @@ var margin = { top: 20, right: 20, bottom: 60, left: 50 },
     heightTotal = 600;
 var marginStatBlock = { top: 20, right: 20, bottom: 30, left: 40 },
     widthStatBlock = 600 - marginStatBlock.left - marginStatBlock.right,
-    heightStatBlock = 330 - marginStatBlock.top - marginStatBlock.bottom,
+    heightStatBlock = 280 - marginStatBlock.top - marginStatBlock.bottom,
     widthStatBlockTotal = 600,
-    heightStatBlockTotal = 330;
+    heightStatBlockTotal = 250;
 var x = d3.scaleBand()
     .range([0, width])
     .padding(0.1);
@@ -288,7 +288,7 @@ function resetStats() {
 }
 
 // Draw some stats and subplots for the chosen bar
-function drawStats(mode, time, selectedBar) {
+function drawStats(mode, time) {
     var startDate = time + "-01-01";
     var endDate;
 
@@ -302,9 +302,6 @@ function drawStats(mode, time, selectedBar) {
         drawGeneralStats(json, mode, time);
         // Remove the loading
         d3.select(".loading").remove();
-        // Reactivate the click events
-        d3.selectAll(".bar").on("click", barClick);
-        d3.select(selectedBar).on("click", null);
     });
 }
 
@@ -568,7 +565,7 @@ function midAngle(d) { return d.startAngle + (d.endAngle - d.startAngle) / 2; }
 // Action to take on mouse click
 function barClick() {
     // Disable the click while processing to avoid multiple stats
-    d3.selectAll(".bar").on("click", null);
+    d3.select(this).on("click", null);
 
     var svgLoading = d3.select(idToSelect[2]).append("svg")
         .attr("class", "loading")
@@ -609,7 +606,7 @@ function barClick() {
         if (modes[i].checked) mode = modes[i].id;
     }
     var time = d3.select(this).attr("id");
-    drawStats(mode, time, this);
+    drawStats(mode, time);
 
     d3.select(this).transition("blink")
         .duration(500)
