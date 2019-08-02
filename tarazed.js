@@ -19,7 +19,7 @@ var x = d3.scaleBand()
 var y = d3.scaleLinear()
     .range([height, 0]);
 var textColor = "#aaaaaa";
-var futureEntriesColor = "rgba(160, 160, 160, 0.6)";
+var futureEntriesColor = "rgba(150, 150, 150, 0.8)";
 var highlightColor = "#7da1e8";
 var loadingText = "...fetching results...";
 var spinnerRadius = 50;
@@ -66,6 +66,7 @@ var background = spinner.append("path")
     .style("fill", textColor)
     .attr("d", arc)
     .call(spin, 1500)
+
 function spin(selection, duration) {
     selection.transition()
         .duration(duration)
@@ -74,6 +75,7 @@ function spin(selection, duration) {
         });
     setTimeout(function () { spin(selection, duration); }, duration);
 }
+
 function transitionFunction(path) {
     path.transition()
         .duration(7500)
@@ -158,7 +160,10 @@ function decadeAggregateData(data) {
     const launches = data.launches;
     // Aggregate data by decade
     decadeAggregate = d3.nest()
-        .key(function (d) { return parseInt(d.windowstart.substring(0, 3) + "0"); })
+        .key(function (d) {
+            decadePrefix = parseInt(d.windowstart.substring(0, 3));
+            return decadePrefix + "0 - " + decadePrefix + "9"
+        })
         .rollup(function (v) { return v.length; })
         .entries(launches);
     return decadeAggregate;
@@ -199,7 +204,7 @@ function statusAggregateData(data) {
 }
 
 // Draw a barchart depending on the aggregation choice
-function drawChartAggregate(data) {
+function drawChartAggregate(data, mode) {
     var g = svg.append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
@@ -212,7 +217,7 @@ function drawChartAggregate(data) {
         .data(data)
         .enter()
         .append("rect")
-        .attr("id", function (d) { return d.key; })
+        .attr("id", function (d) { return d.key.substring(0, 4); })
         .attr("class", "bar") // Assign the color dinamically from 140,35,135 to 240,115,35 (delta +100,+80,-100)
         .attr("fill", function (d, i) {
             let columnsNumber = Object.keys(data).length
@@ -234,18 +239,30 @@ function drawChartAggregate(data) {
         .attr("y", function (d) { return y(d.value); })
         .attr("height", function (d, i) { return height - y(d.value); });
 
-    // Add the x Axis
-    g.append("g")
-        .attr("transform", "translate(" + 0 + "," + (height) + ")")
-        .attr("class", "axis")
-        .call(d3.axisBottom(x))
-        .selectAll("text")
-        .style("text-anchor", "end")
-        .attr("dx", "-.8em")
-        .attr("dy", "-.55em")
-        .attr("transform", "rotate(-90)")
-        .attr("font-weight", 700)
-        .style("font-size", "1.8em");
+    // Add the x Axis: the text changes between year and decade views
+    if (mode === "year") {
+        g.append("g")
+            .attr("transform", "translate(" + 0 + "," + (height) + ")")
+            .attr("class", "axis")
+            .call(d3.axisBottom(x))
+            .selectAll("text")
+            .style("text-anchor", "end")
+            .attr("dx", "-.8em")
+            .attr("dy", "-.55em")
+            .attr("transform", "rotate(-90)")
+            .attr("font-weight", 700)
+            .style("font-size", "1.8em");
+    }
+
+    if (mode === "decade") {
+        g.append("g")
+            .attr("transform", "translate(" + 0 + "," + (height) + ")")
+            .attr("class", "axis")
+            .call(d3.axisBottom(x))
+            .selectAll("text")
+            .attr("font-weight", 700)
+            .style("font-size", "1.8em");
+    }
 
     // Add the y Axis
     g.append("g")
@@ -257,11 +274,23 @@ function drawChartAggregate(data) {
         .style("font-size", "1.8em");
 }
 
+// Delete every visualized year/decade
+function resetStats() {
+    d3.selectAll(".stats").transition("removeStats")
+        .duration(1000) // This transition doesn't work atm (obviously)
+        .attr("opacity", 0)
+        .remove();
+    d3.selectAll(".bar")
+        .on("click", barClick)
+        .transition("deblink")
+        .duration(200)
+        .style("opacity", 1.0);
+}
+
 // Draw some stats and subplots for the chosen bar
 function drawStats(mode, time) {
     var startDate = time + "-01-01";
     var endDate;
-    d3.selectAll(".stats").remove();
 
     if (mode == "year") { endDate = time + "-12-31"; }
     if (mode == "decade") { endDate = (parseInt(time) + 9) + "-12-31"; }
@@ -275,6 +304,7 @@ function drawStats(mode, time) {
         d3.select(".loading").remove();
         // Reactivate the click events
         d3.selectAll(".bar").on("click", barClick);
+        d3.select(this).on("click", null);
     });
 }
 
@@ -329,12 +359,12 @@ function drawDonutLocation(json) {
     var label = svgStats.select(".labels").selectAll("text")
         .data(pie(data))
         .enter().append("text")
-        .attr("x", function(d, i) {
+        .attr("x", function (d, i) {
             var pos = outerArc.centroid(d);
             pos[0] = radius * 1.10 * (midAngle(d) < Math.PI ? 1 : -1);
             return pos[0];
         })
-        .attr( "y", function(d, i) {
+        .attr("y", function (d, i) {
             var pos = outerArc.centroid(d);
             return pos[1];
         })
@@ -364,33 +394,33 @@ function drawDonutLocation(json) {
 
     function relax() {
         var again = false;
-        label.each(function(d, i) {
-             var a = this,
-                 da = d3.select(a),
-                 y1 = da.attr("y");
-                 x1 = da.attr("x");
-              label.each(function(d, j) {
-                  var b = this;
-                  if (a === b) return;               
-                  db = d3.select(b);
-                  if (da.attr("text-anchor") !== db.attr("text-anchor")) return;
-                  var y2 = db.attr("y");
-                  var x2 = db.attr("x");
-                  if (x1 != x2) return;
-                  deltaY = y1 - y2;
-                  if (Math.abs(deltaY) > spacing) return;
-                  again = true;
-                  sign = deltaY > 0? 1: -1;
-                  var adjust = sign * alpha;
-                  da.attr("y", +y1 + adjust);
-                  db.attr("y", +y2 - adjust);
-              });
+        label.each(function (d, i) {
+            var a = this,
+                da = d3.select(a),
+                y1 = da.attr("y");
+            x1 = da.attr("x");
+            label.each(function (d, j) {
+                var b = this;
+                if (a === b) return;
+                db = d3.select(b);
+                if (da.attr("text-anchor") !== db.attr("text-anchor")) return;
+                var y2 = db.attr("y");
+                var x2 = db.attr("x");
+                if (x1 != x2) return;
+                deltaY = y1 - y2;
+                if (Math.abs(deltaY) > spacing) return;
+                again = true;
+                sign = deltaY > 0 ? 1 : -1;
+                var adjust = sign * alpha;
+                da.attr("y", +y1 + adjust);
+                db.attr("y", +y2 - adjust);
+            });
         });
-        
+
         if (again) {
             var labelElements = labels;
             // Pos[0] means the x coordinate of the pos point
-            polyline.attr("points", function (d,i) {
+            polyline.attr("points", function (d, i) {
                 var pos = outerArc.centroid(d);
                 pos[0] = radius * 1.05 * (midAngle(d) < Math.PI ? 1 : -1);
                 var labelForLine = d3.select(labelElements[i]);
@@ -572,20 +602,6 @@ function barClick() {
         .style("fill", textColor)
         .attr("d", arc)
         .call(spin, 1500)
-    function spin(selection, duration) {
-        selection.transition()
-            .duration(duration)
-            .attrTween("transform", function () {
-                return d3.interpolateString("rotate(45)", "rotate(405)");
-            });
-        setTimeout(function () { spin(selection, duration); }, duration);
-    }
-    function transitionFunction(path) {
-        path.transition()
-            .duration(7500)
-            .attrTween("stroke-dasharray", tweenDash)
-            .each("end", function () { d3.select(this).call(transition); });
-    }
 
     var modes = document.getElementById("modes")
     var mode;
@@ -598,9 +614,6 @@ function barClick() {
     d3.select(this).transition("blink")
         .duration(500)
         .style("opacity", 0.5)
-        .transition("deblink")
-        .duration(500)
-        .style("opacity", 1.0);
 }
 
 // Change the stroke on hover, change it back to normal on mouse out
@@ -631,11 +644,11 @@ function storeData(data) {
 
     // Initial barchart
     yearlyAggregatedData = yearlyAggregateData(data);
-    drawChartAggregate(yearlyAggregatedData);
+    drawChartAggregate(yearlyAggregatedData, "year");
 }
 
-var dataDim = d3.select("#modes")
-dataDim.on("change", updateData)
+var dataDim = d3.select("#modes");
+dataDim.on("change", updateData);
 
 // Update the data when the user selects a different radio button
 function updateData() {
@@ -646,17 +659,17 @@ function updateData() {
     d3.select(".loading").remove();
     d3.selectAll("g").remove();
 
-    var modes = document.getElementById("modes")
+    var modes = document.getElementById("modes");
     var mode;
     for (var i = 0; i < modes.length; i++) {
         if (modes[i].checked) mode = modes[i].id;
     }
     if (mode == "decade") {
         decadeAggregatedData = decadeAggregateData(storedData);
-        drawChartAggregate(decadeAggregatedData)
+        drawChartAggregate(decadeAggregatedData, mode);
     }
     if (mode == "year") {
         yearlyAggregatedData = yearlyAggregateData(storedData);
-        drawChartAggregate(yearlyAggregatedData)
+        drawChartAggregate(yearlyAggregatedData, mode);
     }
 }
