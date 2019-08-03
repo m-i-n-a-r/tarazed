@@ -2,73 +2,112 @@
 // D3 is imported in the html file, where this script is executed
 // Some useful variables, all in the same place to simplify the configuration
 
-var idToSelect = ["#tarazed1", "#tarazed2", "#tarazed3", "#tarazed4"];
-var margin = { top: 20, right: 20, bottom: 60, left: 50 },
+var idToSelect = ["#tarazed1", "#tarazed2", "#tarazed3", "#tarazed4"],
+    margin = { top: 20, right: 20, bottom: 60, left: 50 },
     width = 1800 - margin.left - margin.right,
     height = 600 - margin.top - margin.bottom,
     widthTotal = 1800,
-    heightTotal = 600;
-var marginStatBlock = { top: 20, right: 20, bottom: 30, left: 40 },
+    heightTotal = 600,
+    marginStatBlock = { top: 20, right: 20, bottom: 30, left: 40 },
     widthStatBlock = 600 - marginStatBlock.left - marginStatBlock.right,
     heightStatBlock = 280 - marginStatBlock.top - marginStatBlock.bottom,
     widthStatBlockTotal = 600,
-    heightStatBlockTotal = 250;
-var x = d3.scaleBand()
-    .range([0, width])
-    .padding(0.1);
-var y = d3.scaleLinear()
-    .range([height, 0]);
-var maxDrawableStats = 100;
-var textColor = "#aaaaaa";
-var futureEntriesColor = "rgba(150, 150, 150, 0.8)";
-var highlightColor = "#7da1e8";
-var loadingText = "...fetching results...";
-var spinnerRadius = 50;
-var limit = 3000; // Takes up to this number of launches
-var baseUrl = "https://launchlibrary.net/1.4/launch?mode=list"; // Verbose, list or summary
-var finalPageUrl = baseUrl + "&limit=" + limit;
-var nextLaunchUrl = "https://launchlibrary.net/1.4/launch/next/1";
-var storedData;
-var decadeAggregatedData;
-var yearlyAggregatedData;
-var monthlyAggregatedData;
-var lspAggregatedData;
-var locationAggregatedData;
-var drawedStats = 0;
+    heightStatBlockTotal = 250,
+    x = d3.scaleBand().range([0, width]).padding(0.1),
+    y = d3.scaleLinear().range([height, 0]),
+    maxDrawableStats = 100,
+    drawedStats = 0,
+    textColor = "#aaaaaa",
+    futureEntriesColor = "rgba(150, 150, 150, 0.8)",
+    highlightColor = "#7da1e8",
+    loadingText = "...fetching results...",
+    spinnerRadius = 50,
+    launchLimit = 3000, // Takes up to this number of launches
+    baseUrl = "https://launchlibrary.net/1.4/launch?mode=list", // Verbose, list or summary
+    finalPageUrl = baseUrl + "&limit=" + launchLimit,
+    nextLaunchUrl = "https://launchlibrary.net/1.4/launch/next/1",
+    svg,
+    storedData,
+    decadeAggregatedData,
+    yearlyAggregatedData,
+    monthlyAggregatedData,
+    lspAggregatedData,
+    locationAggregatedData;
 
-// The main containers, they should scale to fit the screen div size
-var svg = d3.select(idToSelect[0]).append("svg")
-    .attr("preserveAspectRatio", "xMinYMin meet")
-    .attr("viewBox", "0 0 " + widthTotal + " " + heightTotal)
+function tarazed() {
+    // Update the barchart if the mode changes
+    d3.select("#modes").on("change", updateData);
 
-// A loading text
-svg.append("text")
-    .attr("id", "loadingtext")
-    .attr("x", function (d) { return widthTotal / 2; })
-    .attr("y", function (d) { return heightTotal / 2; })
-    .style("text-anchor", "middle")
-    .attr("fill", textColor)
-    .attr("opacity", 1)
-    .attr("font-size", "3em")
-    .text(loadingText);
+    // The main containers, they should scale to fit the screen div size
+    svg = d3.select(idToSelect[0]).append("svg")
+        .attr("preserveAspectRatio", "xMinYMin meet")
+        .attr("viewBox", "0 0 " + widthTotal + " " + heightTotal)
 
-// A loading spinner
-var radius = spinnerRadius;
-var tau = 2 * Math.PI;
-var arc = d3.arc()
-    .innerRadius(radius * 0.7)
-    .outerRadius(radius * 0.9)
-    .startAngle(0);
-var spinner = svg.append("g")
-    .attr("transform", "translate(" + widthTotal / 2 + "," + (heightTotal / 2 + 80) + ")")
-    .attr("id", "spinner")
-    .attr("opacity", 0.9)
-var background = spinner.append("path")
-    .datum({ endAngle: 0.75 * tau })
-    .style("fill", textColor)
-    .attr("d", arc)
-    .call(spin, 1500)
+    // A loading text
+    svg.append("text")
+        .attr("id", "loadingtext")
+        .attr("x", function (d) { return widthTotal / 2; })
+        .attr("y", function (d) { return heightTotal / 2; })
+        .style("text-anchor", "middle")
+        .attr("fill", textColor)
+        .attr("opacity", 1)
+        .attr("font-size", "3em")
+        .text(loadingText);
 
+    // A loading spinner
+    var radius = spinnerRadius;
+    var tau = 2 * Math.PI;
+    var arc = d3.arc()
+        .innerRadius(radius * 0.7)
+        .outerRadius(radius * 0.9)
+        .startAngle(0);
+    var spinner = svg.append("g")
+        .attr("transform", "translate(" + widthTotal / 2 + "," + (heightTotal / 2 + 80) + ")")
+        .attr("id", "spinner")
+        .attr("opacity", 0.9)
+    var background = spinner.append("path")
+        .datum({ endAngle: 0.75 * tau })
+        .style("fill", textColor)
+        .attr("d", arc)
+        .call(spin, 1500)
+
+    // Get a gigantic json containing every launch in history
+    d3.json(finalPageUrl, json => {
+        // Remove the "loading" screen, show the mode radio buttons
+        d3.select("#loadingtext").transition("removeLoadingText")
+            .duration(500)
+            .attr("opacity", 0)
+            .remove();
+        d3.select("#spinner").transition("removeLoadingSpinner")
+            .duration(500)
+            .attr("opacity", 0)
+            .remove();
+        document.getElementById("modes").style.display = "block";
+
+        // Check internet connection
+        if (json == undefined || json == null) {
+            svg.append("text")
+                .attr("class", "noInternetText")
+                .attr("dy", heightTotal / 2 - 50)
+                .attr("dx", widthTotal / 2)
+                .attr("font-weight", 700)
+                .attr("fill", textColor)
+                .text("NO INTERNET CONNECTION!")
+                .style("font-size", "3em")
+                .style("text-anchor", "middle");
+        }
+        // Store the data for future uses
+        storeData(json);
+    });
+
+    // Get the next launch
+    d3.json(nextLaunchUrl, json => {
+        // Display next launch
+        displayNextLaunch(json);
+    });
+}
+
+// Needed for the loading spinner
 function spin(selection, duration) {
     selection.transition()
         .duration(duration)
@@ -78,6 +117,7 @@ function spin(selection, duration) {
     setTimeout(function () { spin(selection, duration); }, duration);
 }
 
+// Needed for the loading spinner
 function transitionFunction(path) {
     path.transition()
         .duration(7500)
@@ -111,41 +151,6 @@ function displayNextLaunch(data) {
         }
     }, 1000);
 }
-
-// Get a gigantic json containing every launch in history
-d3.json(finalPageUrl, json => {
-    // Remove the "loading" screen, show the mode radio buttons
-    d3.select("#loadingtext").transition("removeLoadingText")
-        .duration(500)
-        .attr("opacity", 0)
-        .remove();
-    d3.select("#spinner").transition("removeLoadingSpinner")
-        .duration(500)
-        .attr("opacity", 0)
-        .remove();
-    document.getElementById("modes").style.display = "block";
-
-    // Check internet connection
-    if (json == undefined || json == null) {
-        svg.append("text")
-            .attr("class", "noInternetText")
-            .attr("dy", heightTotal / 2 - 50)
-            .attr("dx", widthTotal / 2)
-            .attr("font-weight", 700)
-            .attr("fill", textColor)
-            .text("NO INTERNET CONNECTION!")
-            .style("font-size", "3em")
-            .style("text-anchor", "middle");
-    }
-    // Store the data for future uses
-    storeData(json);
-});
-
-// Get the next launch
-d3.json(nextLaunchUrl, json => {
-    // Display next launch
-    displayNextLaunch(json);
-});
 
 // Data aggregation functions
 function yearlyAggregateData(data) {
@@ -575,7 +580,7 @@ function barClick() {
 
     // Useful to draw only the right number of stats 
     drawedStats++;
-    if(drawedStats >= maxDrawableStats) d3.selectAll(".bar").on("click", null);
+    if (drawedStats >= maxDrawableStats) d3.selectAll(".bar").on("click", null);
 
     var svgLoading = d3.select(idToSelect[2]).append("svg")
         .attr("class", "loading")
@@ -623,7 +628,7 @@ function barClick() {
         .style("opacity", 0.5)
 }
 
-// Change the stroke on hover, change it back to normal on mouse out
+// Change the stroke on hover
 function barMouseover() {
     d3.select(this).transition("hoverBar")
         .duration(300)
@@ -631,12 +636,14 @@ function barMouseover() {
         .style("stroke-width", 10)
 }
 
+// Restore the previous stroke on mouseout
 function barMouseout() {
     d3.select(this).transition("outBar")
         .duration(300)
         .style("stroke-width", 0)
 }
 
+// Move the text in the donuts to highlight it
 function donutMouseover() {
     d3.selectAll(".centerText").transition("modeDown")
         .duration(500)
@@ -646,6 +653,7 @@ function donutMouseover() {
         .attr("dy", 0)
 }
 
+// Store the data in a global variable
 function storeData(data) {
     storedData = data;
 
@@ -653,9 +661,6 @@ function storeData(data) {
     yearlyAggregatedData = yearlyAggregateData(data);
     drawChartAggregate(yearlyAggregatedData, "year");
 }
-
-var dataDim = d3.select("#modes");
-dataDim.on("change", updateData);
 
 // Update the data when the user selects a different radio button
 function updateData() {
@@ -680,3 +685,6 @@ function updateData() {
         drawChartAggregate(yearlyAggregatedData, mode);
     }
 }
+
+// * * * * * * * EXECUTE TARAZED * * * * * * *
+tarazed();
