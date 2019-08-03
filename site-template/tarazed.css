@@ -1,0 +1,239 @@
+/* Other useful styles */
+@import "https://use.fontawesome.com/releases/v5.7.2/css/all.css";
+/* To use a different font, such as Product Sans, visit https://fonts.google.com/ and choose one.
+Then simply replace "K2D" with the name of the chosen font, in the line below and at line 12 */
+@import "https://fonts.googleapis.com/css?family=K2D:300,500";
+
+html, body, div, span, applet, object,
+iframe, h1, h2, h3, h4, h5, h6, p, blockquote,
+pre, a, abbr, acronym, address, big, cite,
+code, del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var, b,
+u, i, center, dl, dt, dd, ol, ul, li, fieldset,
+form, label, legend, table, caption, tbody,
+tfoot, thead, tr, th, td, article, aside,
+canvas, details, embed, figure, figcaption,
+footer, header, hgroup, menu, nav, output, ruby,
+section, summary, time, mark, audio, video {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	font-size: 100%;
+	font: inherit;
+	vertical-align: baseline;}
+
+body {
+    font-size: 16px;
+    color: #222;
+    background: #000;
+    font-family: "K2D", sans-serif;
+}
+
+/* Headers */
+h1 {
+    text-align: center;
+    margin: auto;
+    font-weight: normal;
+    font-size: 3rem;
+    color: #aaa;
+}
+
+h2 {
+    text-align: center;
+    margin: auto;
+    font-weight: normal;
+    font-size: 2rem;
+    color: #aaa;
+}
+
+h5 {
+    text-align: center;
+    margin: auto;
+    font-weight: normal;
+    font-size: 0.9rem;
+    color: #aaa;
+}
+
+/* Main container, misc */
+.maincontainer {
+  margin-bottom: 15px;
+}
+
+.modes {
+  text-align: center;
+  display: none;
+}
+
+.divider {
+  width: 30px;
+  height: auto;
+  display: inline-block;
+}
+
+/* Axes colors */
+.axis line {
+    stroke: #aaa;
+  }
+  
+.axis path {
+    stroke: #aaa;
+  }
+  
+.axis text {
+    fill: #aaa;
+  }  
+
+/* Responsive stats */  
+.statscontainer {
+     display: flex;
+     margin-top: 30px;
+}
+  
+.statssection {
+    flex: 1;
+}
+  
+@media (max-width: 768px) {
+    .statscontainer {
+        flex-direction: column;
+    }
+}
+
+/* Radio buttons */
+[type="radio"]:checked,
+[type="radio"]:not(:checked) {
+    position: absolute;
+    left: -9999px;
+}
+[type="radio"]:checked + label,
+[type="radio"]:not(:checked) + label
+{
+    position: relative;
+    padding-left: 28px;
+    cursor: pointer;
+    line-height: 20px;
+    display: inline-block;
+    color: #aaa;
+}
+[type="radio"]:checked + label:before,
+[type="radio"]:not(:checked) + label:before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 18px;
+    height: 18px;
+    border: 2px solid #aaa;
+    border-radius: 100%;
+    background: #000;
+}
+[type="radio"]:checked + label:after,
+[type="radio"]:not(:checked) + label:after {
+    content: '';
+    width: 12px;
+    height: 12px;
+    background: #7da1e8;
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    border-radius: 100%;
+    -webkit-transition: all 0.2s ease;
+    transition: all 0.2s ease;
+}
+[type="radio"]:not(:checked) + label:after {
+    opacity: 0;
+    -webkit-transform: scale(0);
+    transform: scale(0);
+}
+[type="radio"]:checked + label:after {
+    opacity: 1;
+    -webkit-transform: scale(1);
+    transform: scale(1);
+}
+
+/* Buttons */
+.bouncy {
+  animation: bouncy 5s infinite linear;
+  position: relative;
+}
+
+  @keyframes bouncy {
+  0%{top: 0em}
+  40%{top: 0em}
+  43%{top: -0.9em}
+  46%{top: 0em}
+  48%{top: -0.4em}
+  50%{top: 0em}
+  100%{top: 0em;}
+}
+
+a.button1 {
+  display: inline-block;
+  padding: 0.35em 1.2em;
+  border: 0.1em solid #aaa;
+  margin: 0 0.3em 0.3em 0;
+  border-radius: 0.42em;
+  box-sizing: border-box;
+  text-decoration: none;
+  font-family:'Roboto',sans-serif;
+  font-weight: 700;
+  color: #aaa;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+a.button1:hover {
+  color: #000000;
+  background-color: #aaa;
+}
+
+@media all and (max-width: 30em){
+  a.button1 {
+    display: block;
+    margin: 0.4em auto;
+  }
+}
+
+/* Donut charts */
+polyline {
+  opacity: .3;
+  stroke: black;
+  stroke-width: 2px;
+  fill: none;
+}
+
+/* Make the percentage on the text labels bold*/
+.labelName tspan {
+  font-style: normal;
+  font-weight: 700;
+}
+
+.labelName {
+  font-size: 1em;
+  font-style: bold;
+}
+
+/* Particles css */
+#particlesjsstarfield {
+    width: 100%;
+    height: 100%;
+    position: fixed;
+    z-index: -120;
+    background-color: rgba(0, 0, 0, 0); /* Background color */
+    background-image: url(''); /* Background image, if needed */
+    background-size: cover;
+    background-position: 50% 50%;
+    background-repeat: no-repeat; /* Useful when using a texture */
+  }
+
+#particlesjsrockets {
+    width: 100%;
+    height: 100%;
+    position: fixed;
+    z-index: -100;
+    background-color: rgba(0, 0, 0, 0); /* Background color */
+    background-image: url(''); /* Background image, if needed */
+    background-size: cover;
+    background-position: 50% 50%;
+    background-repeat: no-repeat; /* Useful when using a texture */
+  }

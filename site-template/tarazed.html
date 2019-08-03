@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<link rel="stylesheet" type="text/css" href="tarazed.css">
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+
+<body>
+    <!-- Particles.js container used as a background. Removing it removes the particles -->
+    <div id="particlesjsstarfield"></div>
+    <div id="particlesjsrockets"></div>
+    <h2>Tarazed - History of space launches</h2>
+    <h5 id="nextlaunch">Next launch: </h5>
+    <div class="maincontainer" id="tarazed1"></div>
+    <div>
+        <form id="modes" class="modes">
+            <input type="radio" id="decade" name="mode"><label for="decade">Decades view</label>
+            <div class="divider"></div>
+            <a class="button1 bouncy" onclick="resetStats()">CLEAR STATS</a>
+            <div class="divider"></div>
+            <input type="radio" id="year" name="mode" checked><label for="year">Years view</label>
+        </form>
+    </div>
+    <div class="statscontainer">
+        <div class="statssection" id="tarazed2"></div>
+        <div class="statssection" id="tarazed3"></div>
+        <div class="statssection" id="tarazed4"></div>
+    </div>
+</body>
+
+<!-- Scripts - some arent't used, but could be useful -->
+<script src="assets/js/particles.js"></script>
+<script src="assets/js/rockets.js"></script>
+<script src="assets/js/starfield.js"></script>
+<script src="tarazed.js"></script>
