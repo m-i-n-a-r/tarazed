@@ -16,13 +16,15 @@ Approximately, there are **2000 launches**, **250 agencies**, **15 launch locati
 - Dynamic data! The visualization is **automatically updated** when a new launch is scheduled
 - Interactive visual representation, **advanced stats** (completed/failed, launch location, total launches and more)
 - **Countdown** to the next scheduled launch
-- Compare launches across 2 or more years or decades
+- **Compare** launches across 2 or more years or decades
 - The sources are easy to **customize** and understand
 - A simple **page template** to display the graph (including a customizable [particles.js](https://vincentgarreau.com/particles.js/) background)
 
 ## Screenshots
-![Basic layout without the page template](screenshot.png?raw=true "Basic Tarazed layout")
-![Basic layout with the page template](screenshot2.png?raw=true "Tarazed template layout")
+### Basic layout (tarazed-clean folder)
+![Basic layout without the page template](ss-basic.png?raw=true "Basic Tarazed layout" | width=300)
+### Template layout (tarazed-template folder)
+![Basic layout with the page template](ss-template.png?raw=true "Tarazed template layout" | width=300)
 
 ## How to
 Just clone the repo! You can use it as it is (use an http local server running the command `python -m http.server 8080`), or import the script and the css in another html page: make sure to add 4 `div`s with the correct id (it must match the `idToSelect` variable in the js file). The customizable elements are in the script iteself and in the css. 
