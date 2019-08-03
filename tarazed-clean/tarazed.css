@@ -8,7 +8,7 @@ body {
     font-size: 16px;
     color: #222;
     background: #fff;
-    padding: 0 3rem 1rem 3rem;
+    padding: 0 1rem 1rem 1rem;
     font-family: 'Ubuntu', sans-serif;
 }
 
@@ -71,8 +71,10 @@ h5 {
 
 /* Responsive stats */  
 .statscontainer {
-     display: flex;
-     margin-top: 30px;
+    overflow-x: hidden; /* Avoid to show the horizontal scrollbar when clearstats is pressed */
+    display: flex;
+    padding: 0;
+    margin-top: 30px;
 }
   
 .statssection {
@@ -156,12 +158,11 @@ h5 {
 a.button1 {
     display: inline-block;
     padding: 0.35em 1.2em;
-    border: 0.1em solid #aaa;
+    border: 0.2em solid #aaa;
     margin: 0 0.3em 0.3em 0;
-    border-radius: 0.42em;
+    border-radius: 0.6em;
     box-sizing: border-box;
     text-decoration: none;
-    font-family:'Roboto',sans-serif;
     font-weight: 700;
     color: #aaa;
     text-align: center;
@@ -169,7 +170,7 @@ a.button1 {
 }
 
 a.button1:hover {
-    color: #000000;
+    color: #fff;
     background-color: #aaa;
 }
   

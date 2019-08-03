@@ -2,7 +2,8 @@
 // D3 is imported in the html file, where this script is executed
 // Some useful variables, all in the same place to simplify the configuration
 
-var idToSelect = ["#tarazed1", "#tarazed2", "#tarazed3", "#tarazed4"],
+var idToSelect = "#tarazed",
+    subIdToSelect = [],
     margin = { top: 20, right: 20, bottom: 60, left: 50 },
     width = 1800 - margin.left - margin.right,
     height = 600 - margin.top - margin.bottom,
@@ -39,7 +40,7 @@ function tarazed() {
     d3.select("#modes").on("change", updateData);
 
     // The main containers, they should scale to fit the screen div size
-    svg = d3.select(idToSelect[0]).append("svg")
+    svg = d3.select(idToSelect).append("svg")
         .attr("preserveAspectRatio", "xMinYMin meet")
         .attr("viewBox", "0 0 " + widthTotal + " " + heightTotal)
 
@@ -242,12 +243,26 @@ function drawChartAggregate(data, mode) {
         .on("click", barClick)
         .transition("bar spawning")
         .duration(250)
-        .delay(function (d, i) { return i * 50; })
+        .delay(function (d, i) { 
+            if(mode === "year") return i * 30;
+            if(mode === "decade") return i * 100
+            else return i * 50; 
+        })
         .attr("y", function (d) { return y(d.value); })
         .attr("height", function (d, i) { return height - y(d.value); });
 
     // Add the x Axis: the text changes between year and decade views
-    if (mode === "year") {
+    if (mode === "decade") {
+        g.append("g")
+            .attr("transform", "translate(" + 0 + "," + (height) + ")")
+            .attr("class", "axis")
+            .call(d3.axisBottom(x))
+            .selectAll("text")
+            .attr("font-weight", 700)
+            .style("font-size", "1.8em");
+    }
+
+    else {
         g.append("g")
             .attr("transform", "translate(" + 0 + "," + (height) + ")")
             .attr("class", "axis")
@@ -257,16 +272,6 @@ function drawChartAggregate(data, mode) {
             .attr("dx", "-.8em")
             .attr("dy", "-.55em")
             .attr("transform", "rotate(-90)")
-            .attr("font-weight", 700)
-            .style("font-size", "1.8em");
-    }
-
-    if (mode === "decade") {
-        g.append("g")
-            .attr("transform", "translate(" + 0 + "," + (height) + ")")
-            .attr("class", "axis")
-            .call(d3.axisBottom(x))
-            .selectAll("text")
             .attr("font-weight", 700)
             .style("font-size", "1.8em");
     }
@@ -284,15 +289,23 @@ function drawChartAggregate(data, mode) {
 // Delete every visualized year/decade
 function resetStats() {
     drawedStats = 0;
-    d3.selectAll(".stats").transition("removeStats")
-        .duration(1000) // This transition doesn't work atm (obviously)
-        .attr("opacity", 0)
-        .remove();
+    d3.selectAll(".stats")
+        .transition("removeStats")
+        .duration(1000)
+        .delay(function (d, i) { return (i * 100); })
+        .attr("transform", "translate(" + widthTotal + ")")
+        .on("end", function() {
+            // Remove the generated divs
+            var statsCointainer = document.getElementById("statsMain");
+            while (statsCointainer.firstChild) statsCointainer.removeChild(statsCointainer.firstChild);
+        });
+
     d3.selectAll(".bar")
         .on("click", barClick)
         .on("mouseover", barMouseover)
+        .on("mouseout", barMouseout)
         .transition("deblink")
-        .duration(200)
+        .duration(800)
         .style("opacity", 1.0);
 }
 
@@ -314,7 +327,7 @@ function drawStats(mode, time) {
     });
 }
 
-// Draw the subcharts
+// Draw the location donut chart
 function drawDonutLocation(json) {
     var radius = Math.min(widthStatBlock, heightStatBlock) / 2;
     // Get an array of numbers from a dynamical query to the site
@@ -330,7 +343,7 @@ function drawDonutLocation(json) {
     var arc = d3.arc().innerRadius(radius * 0.85).outerRadius(radius * 0.65);
 
     // Select one of the 3 sub-areas of the stats
-    var svgStats = d3.select(idToSelect[1]).append("svg")
+    var svgStats = d3.select(subIdToSelect[0]).append("svg")
         .attr("class", "stats")
         .attr("preserveAspectRatio", "xMinYMin meet")
         .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal)
@@ -378,7 +391,7 @@ function drawDonutLocation(json) {
         .attr("font-weight", 700)
         .attr("fill", textColor)
         .style("font-size", ".95em")
-        .text(function (d, i) { return d.data + " - " + aggregateDict[i].key; })
+        .text(function (d, i) { return d.data + " | " + aggregateDict[i].key; })
         .style("text-anchor", function (d) {
             return (midAngle(d)) < Math.PI ? "start" : "end";
         });
@@ -441,21 +454,30 @@ function drawDonutLocation(json) {
     relax();
 }
 
+// Draw the status donut chart
 function drawDonutCompletedFailed(json) {
     var radius = Math.min(widthStatBlock, heightStatBlock) / 2;
     // Get an array of numbers from a dynamical query to the site
     aggregateDict = statusAggregateData(json);
-    var data = [];
-    for (key in aggregateDict) data.push(aggregateDict[key].value)
-    var color = d3.scaleOrdinal()
-        .domain(data)
-        // Colors used in the donut chart
-        .range(["#a63fa1", "#ca7b49", "#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#aaaaaa"])
-    var pie = d3.pie().sort(null).value(d => d);
+    // Calculate the percentages and the values
+    var data = [],
+        valueSum = Object.keys(aggregateDict).reduce((sum,key) => sum + parseFloat(aggregateDict[key].value || 0), 0),
+        percentages = [];
+    for (key in aggregateDict) { 
+        data.push(aggregateDict[key].value);
+        percentages.push(Math.round(aggregateDict[key].value / valueSum * 100));
+    }
+    // Since there are 3 possible values, the colors are specified manually for each value
+    var color = {
+        "uncertain": "#a63fa1",
+        "failed":  "#ca7b49",
+        "complete": "#98abc5"
+    }
+    var pie = d3.pie().startAngle(-0.3 * Math.PI).value(d => d);
     var arc = d3.arc().innerRadius(radius * 0.85).outerRadius(radius * 0.65);
 
     // Select one of the 3 sub-areas of the stats
-    var svgStats = d3.select(idToSelect[3]).append("svg")
+    var svgStats = d3.select(subIdToSelect[2]).append("svg")
         .attr("class", "stats")
         .attr("preserveAspectRatio", "xMinYMin meet")
         .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal)
@@ -470,7 +492,7 @@ function drawDonutCompletedFailed(json) {
         .enter()
         .append("path")
         .attr("d", arc)
-        .attr("fill", (d, i) => color(i));
+        .attr("fill", (d, i) => color[aggregateDict[i].key]);
     svgStats.append("g").classed("labels", true);
     svgStats.append("g").classed("lines", true);
 
@@ -479,7 +501,7 @@ function drawDonutCompletedFailed(json) {
         .data(pie(data))
         .enter().append("polyline")
         .style("opacity", 1)
-        .style("stroke", (d, i) => color(i))
+        .style("stroke", (d, i) => color[aggregateDict[i].key])
         .style("stroke-width", 3)
         .attr("points", function (d) {
             var pos = outerArc.centroid(d);
@@ -494,7 +516,7 @@ function drawDonutCompletedFailed(json) {
         .attr("font-weight", 700)
         .attr("fill", textColor)
         .style("font-size", "1.1em")
-        .text(function (d, i) { return d.data + " " + aggregateDict[i].key; })
+        .text(function (d, i) { return d.data + " " + aggregateDict[i].key + " | " + percentages[i] + "%"; })
         .attr("transform", function (d) {
             var pos = outerArc.centroid(d);
             pos[0] = radius * 1.10 * (midAngle(d) < Math.PI ? 1 : -1);
@@ -523,7 +545,7 @@ function drawGeneralStats(json, mode, time) {
     var bestObj = Math.max.apply(Math, aggregateDict.map(function (o) { return o.value; }));
     var bestLsp = aggregateDict.find(function (o) { return o.value == bestObj; });
 
-    var svgGeneralStats = d3.select(idToSelect[2]).append("svg")
+    var svgGeneralStats = d3.select(subIdToSelect[1]).append("svg")
         .attr("class", "stats")
         .attr("preserveAspectRatio", "xMinYMin meet")
         .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal)
@@ -575,14 +597,44 @@ function midAngle(d) { return d.startAngle + (d.endAngle - d.startAngle) / 2; }
 function barClick() {
     // Disable the click on the already selected years/decades
     d3.select(this)
+        .transition("removeStroke")
+        .duration(1000)
+        .style("stroke-width", 0);
+
+    d3.select(this)
         .on("click", null)
-        .on("mouseover", null);
+        .on("mouseover", null)
+        .on("mouseout", null);
 
     // Useful to draw only the right number of stats 
     drawedStats++;
     if (drawedStats >= maxDrawableStats) d3.selectAll(".bar").on("click", null);
 
-    var svgLoading = d3.select(idToSelect[2]).append("svg")
+    // Append the necessary elements to the DOM instead of declaring them manually
+    var statDiv = document.createElement("div");
+    statDiv.id = "statContainer" + drawedStats;
+    statDiv.className = "statscontainer";
+    document.getElementById("statsMain").appendChild(statDiv);
+
+    var block1Div = document.createElement("div");
+    block1Div.id = "firstStatBlock" + drawedStats;
+    subIdToSelect[0] = "#" + block1Div.id;
+    block1Div.className = "statssection";
+    document.getElementById("statContainer" + drawedStats).appendChild(block1Div);
+
+    var block2Div = document.createElement("div");
+    block2Div.id = "secondStatBlock" + drawedStats;
+    subIdToSelect[1] = "#" + block2Div.id;
+    block2Div.className = "statssection";
+    document.getElementById("statContainer" + drawedStats).appendChild(block2Div);
+
+    var block3Div = document.createElement("div");
+    block3Div.id = "thirdStatBlock" + drawedStats;
+    subIdToSelect[2] = "#" + block3Div.id;
+    block3Div.className = "statssection";
+    document.getElementById("statContainer" + drawedStats).appendChild(block3Div);
+
+    var svgLoading = d3.select(subIdToSelect[1]).append("svg")
         .attr("class", "loading")
         .attr("preserveAspectRatio", "xMinYMin meet")
         .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal);
@@ -609,7 +661,7 @@ function barClick() {
         .attr("transform", "translate(" + widthStatBlockTotal / 2 + "," + (heightStatBlockTotal / 2) + ")")
         .attr("id", "spinner")
         .attr("opacity", 0.9)
-    var background = spinner.append("path")
+    spinner.append("path")
         .datum({ endAngle: 0.75 * tau })
         .style("fill", textColor)
         .attr("d", arc)
@@ -633,24 +685,24 @@ function barMouseover() {
     d3.select(this).transition("hoverBar")
         .duration(300)
         .style("stroke", highlightColor)
-        .style("stroke-width", 10)
+        .style("stroke-width", 10);
 }
 
 // Restore the previous stroke on mouseout
 function barMouseout() {
     d3.select(this).transition("outBar")
         .duration(300)
-        .style("stroke-width", 0)
+        .style("stroke-width", 0);
 }
 
 // Move the text in the donuts to highlight it
 function donutMouseover() {
     d3.selectAll(".centerText").transition("modeDown")
-        .duration(500)
-        .attr("dy", 10)
+        .duration(300)
+        .attr("dy", 5)
         .transition("moveUp")
-        .duration(200)
-        .attr("dy", 0)
+        .duration(100)
+        .attr("dy", 0);
 }
 
 // Store the data in a global variable

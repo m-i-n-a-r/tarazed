@@ -7,7 +7,7 @@
 <body>
     <h2>Tarazed - History of space launches</h2>
     <h5 id="nextlaunch">Next launch: </h5>
-    <div class="maincontainer" id="tarazed1"></div>
+    <div class="maincontainer" id="tarazed"></div>
     <div>
         <form id="modes" class="modes">
             <input type="radio" id="decade" name="mode"><label for="decade">Decades view</label>
@@ -17,11 +17,8 @@
             <input type="radio" id="year" name="mode" checked><label for="year">Years view</label>
         </form>
     </div>
-    <div class="statscontainer">
-        <div class="statssection" id="tarazed2"></div>
-        <div class="statssection" id="tarazed3"></div>
-        <div class="statssection" id="tarazed4"></div>
-    </div>
+    <!-- The stats section is dinamically created in the script -->
+    <div id="statsMain"></div>
 </body>
 
 <script src="tarazed.js"></script>
