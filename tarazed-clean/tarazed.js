@@ -83,6 +83,8 @@ function tarazed() {
             .attr("opacity", 0)
             .remove();
         document.getElementById("modes").style.display = "block";
+        // Stats placeholder
+        createStatsPlaceholder();
 
         // Check internet connection
         if (json == undefined || json == null) {
@@ -123,6 +125,25 @@ function transitionFunction(path) {
         .duration(7500)
         .attrTween("stroke-dasharray", tweenDash)
         .each("end", function () { d3.select(this).call(transition); });
+}
+
+// A placeholder for the stats, if needed
+function createStatsPlaceholder() {
+    var statsPlaceholder = document.createElement("div");
+    statsPlaceholder.id = "statsPlaceholder";
+    document.getElementsByTagName("body")[0].appendChild(statsPlaceholder);
+        
+    svgStatsPlaceholder = d3.select("#statsPlaceholder").append("svg")
+        .attr("preserveAspectRatio", "xMinYMin meet")
+        .attr("viewBox", "0 0 " + widthTotal + " " + heightStatBlockTotal)
+        .append("text")
+        .attr("x", function (d) { return widthTotal / 2; })
+        .attr("y", function (d) { return heightStatBlockTotal / 2 + 50; })
+        .style("text-anchor", "middle")
+        .attr("fill", textColor)
+        .attr("font-weight", 700)
+        .attr("font-size", "2em")
+        .text("Select a bar to see its details");
 }
 
 // Given its data, display the next launch
@@ -297,8 +318,10 @@ function resetStats() {
             // Remove the generated divs
             var statsCointainer = document.getElementById("statsList");
             while (statsCointainer.firstChild) statsCointainer.removeChild(statsCointainer.firstChild);
+            // Show the stats placeholder
+            document.getElementById("statsPlaceholder").style.display = "block";
         });
-
+    
     // Autoscroll the page up (can be removed for bigger pages)
     const scrollToTop = () => {
         const c = document.documentElement.scrollTop || document.body.scrollTop;
@@ -320,9 +343,9 @@ function resetStats() {
 
 // Draw some stats and subplots for the chosen bar
 function drawStats(mode, time) {
-    var startDate = time + "-01-01";
-    var endDate;
-    var subIdToSelect = [];
+    var startDate = time + "-01-01",
+        endDate,
+        subIdToSelect = [];
 
     // Append the necessary elements to the DOM instead of declaring them manually
     var statsMain = document.createElement("div");
@@ -681,6 +704,9 @@ function barClick() {
         .on("click", null)
         .on("mouseover", null)
         .on("mouseout", null);
+
+    // Hide the stats placeholder
+    document.getElementById("statsPlaceholder").style.display = "none";
 
     // Useful to draw only the right number of stats 
     drawedStats++;
