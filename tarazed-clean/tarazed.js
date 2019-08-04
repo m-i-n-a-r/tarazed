@@ -299,6 +299,16 @@ function resetStats() {
             while (statsCointainer.firstChild) statsCointainer.removeChild(statsCointainer.firstChild);
         });
 
+    // Autoscroll the page up (can be removed for bigger pages)
+    const scrollToTop = () => {
+        const c = document.documentElement.scrollTop || document.body.scrollTop;
+        if (c > 0) {
+          window.requestAnimationFrame(scrollToTop);
+          window.scrollTo(0, c - c / 12);
+        }
+      };
+    scrollToTop();
+
     d3.selectAll(".bar")
         .on("click", barClick)
         .on("mouseover", barMouseover)
