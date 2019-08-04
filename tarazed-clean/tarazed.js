@@ -290,7 +290,7 @@ function resetStats() {
     drawedStats = 0;
     d3.selectAll(".stats")
         .transition("removeStats")
-        .duration(2000)
+        .duration(1500)
         .delay(function (d, i) { return (i / 3 * 100); })
         .attr("transform", "translate(" + widthTotal + ")")
         .on("end", function() {
@@ -719,9 +719,7 @@ function updateData() {
     // Clean from any previous visualization
     d3.selectAll(".bar").remove();
     d3.selectAll(".axis").remove();
-    // Remove the generated divs
-    var statsCointainer = document.getElementById("statsList");
-    while (statsCointainer.firstChild) statsCointainer.removeChild(statsCointainer.firstChild);
+    resetStats();
 
     var modes = document.getElementById("modes");
     var mode;
