@@ -3,7 +3,6 @@
 // Some useful variables, all in the same place to simplify the configuration
 
 var idToSelect = "#tarazed",
-    subIdToSelect = [],
     margin = { top: 20, right: 20, bottom: 60, left: 50 },
     width = 1800 - margin.left - margin.right,
     height = 600 - margin.top - margin.bottom,
@@ -291,12 +290,12 @@ function resetStats() {
     drawedStats = 0;
     d3.selectAll(".stats")
         .transition("removeStats")
-        .duration(1000)
-        .delay(function (d, i) { return (i * 100); })
+        .duration(2000)
+        .delay(function (d, i) { return (i / 3 * 100); })
         .attr("transform", "translate(" + widthTotal + ")")
         .on("end", function() {
             // Remove the generated divs
-            var statsCointainer = document.getElementById("statsMain");
+            var statsCointainer = document.getElementById("statsList");
             while (statsCointainer.firstChild) statsCointainer.removeChild(statsCointainer.firstChild);
         });
 
@@ -313,22 +312,80 @@ function resetStats() {
 function drawStats(mode, time) {
     var startDate = time + "-01-01";
     var endDate;
+    var subIdToSelect = [];
+
+    // Append the necessary elements to the DOM instead of declaring them manually
+    var statsMain = document.createElement("div");
+    statsMain.id = "statsMain" + drawedStats;
+    statsMain.className = "statscontainer";
+    document.getElementById("statsList").appendChild(statsMain);
+
+    var block1Div = document.createElement("div");
+    block1Div.id = "firstStatBlock" + drawedStats;
+    subIdToSelect[0] = "#" + block1Div.id;
+    block1Div.className = "statssection";
+    document.getElementById("statsMain" + drawedStats).appendChild(block1Div);
+
+    var block2Div = document.createElement("div");
+    block2Div.id = "secondStatBlock" + drawedStats;
+    subIdToSelect[1] = "#" + block2Div.id;
+    block2Div.className = "statssection";
+    document.getElementById("statsMain" + drawedStats).appendChild(block2Div);
+
+    var block3Div = document.createElement("div");
+    block3Div.id = "thirdStatBlock" + drawedStats;
+    subIdToSelect[2] = "#" + block3Div.id;
+    block3Div.className = "statssection";
+    document.getElementById("statsMain" + drawedStats).appendChild(block3Div);
+
+    var svgLoading = d3.select("#statsMain" + drawedStats).append("svg")
+        .attr("class", "loading")
+        .attr("preserveAspectRatio", "xMinYMin meet")
+        .attr("viewBox", "0 0 " + widthTotal + " " + heightStatBlockTotal);
+
+    // A loading text
+    svgLoading.append("text")
+        .attr("id", "loadingtext")
+        .attr("x", function (d) { return widthTotal / 2; })
+        .attr("y", function (d) { return heightStatBlockTotal / 2 - 50; })
+        .style("text-anchor", "middle")
+        .attr("fill", textColor)
+        .attr("opacity", 1)
+        .attr("font-size", "2em")
+        .text(loadingText);
+
+    // A loading spinner
+    var radius = spinnerRadius;
+    var tau = 2 * Math.PI;
+    var arc = d3.arc()
+        .innerRadius(radius * 0.45)
+        .outerRadius(radius * 0.55)
+        .startAngle(0);
+    var spinner = svgLoading.append("g")
+        .attr("transform", "translate(" + widthTotal / 2 + "," + (heightStatBlockTotal / 2) + ")")
+        .attr("id", "spinner")
+        .attr("opacity", 0.9)
+    spinner.append("path")
+        .datum({ endAngle: 0.75 * tau })
+        .style("fill", textColor)
+        .attr("d", arc)
+        .call(spin, 1500)
 
     if (mode == "year") { endDate = time + "-12-31"; }
     if (mode == "decade") { endDate = (parseInt(time) + 9) + "-12-31"; }
     queryUrl = "https://launchlibrary.net/1.4/launch?mode=verbose&limit=9999&startdate=" + startDate + "&enddate=" + endDate;
     d3.json(queryUrl, json => {
         // Chosen stats: total launches, location pie chart, lsp pie chart, failed launches vs completed launches
-        drawDonutLocation(json);
-        drawDonutCompletedFailed(json);
-        drawGeneralStats(json, mode, time);
+        drawDonutLocation(json, subIdToSelect);
+        drawDonutCompletedFailed(json, subIdToSelect);
+        drawGeneralStats(json, mode, time, subIdToSelect);
         // Remove the loading
         d3.select(".loading").remove();
     });
 }
 
 // Draw the location donut chart
-function drawDonutLocation(json) {
+function drawDonutLocation(json, subIdToSelect) {
     var radius = Math.min(widthStatBlock, heightStatBlock) / 2;
     // Get an array of numbers from a dynamical query to the site
     aggregateDict = locationAggregateData(json);
@@ -455,7 +512,7 @@ function drawDonutLocation(json) {
 }
 
 // Draw the status donut chart
-function drawDonutCompletedFailed(json) {
+function drawDonutCompletedFailed(json, subIdToSelect) {
     var radius = Math.min(widthStatBlock, heightStatBlock) / 2;
     // Get an array of numbers from a dynamical query to the site
     aggregateDict = statusAggregateData(json);
@@ -538,7 +595,7 @@ function drawDonutCompletedFailed(json) {
 }
 
 // Draw some general statistics: selected time, total launches, most active lsp
-function drawGeneralStats(json, mode, time) {
+function drawGeneralStats(json, mode, time, subIdToSelect) {
     aggregateDict = lspAggregateData(json);
     var data = [];
     for (key in aggregateDict) data.push(aggregateDict[key].value);
@@ -610,63 +667,6 @@ function barClick() {
     drawedStats++;
     if (drawedStats >= maxDrawableStats) d3.selectAll(".bar").on("click", null);
 
-    // Append the necessary elements to the DOM instead of declaring them manually
-    var statDiv = document.createElement("div");
-    statDiv.id = "statContainer" + drawedStats;
-    statDiv.className = "statscontainer";
-    document.getElementById("statsMain").appendChild(statDiv);
-
-    var block1Div = document.createElement("div");
-    block1Div.id = "firstStatBlock" + drawedStats;
-    subIdToSelect[0] = "#" + block1Div.id;
-    block1Div.className = "statssection";
-    document.getElementById("statContainer" + drawedStats).appendChild(block1Div);
-
-    var block2Div = document.createElement("div");
-    block2Div.id = "secondStatBlock" + drawedStats;
-    subIdToSelect[1] = "#" + block2Div.id;
-    block2Div.className = "statssection";
-    document.getElementById("statContainer" + drawedStats).appendChild(block2Div);
-
-    var block3Div = document.createElement("div");
-    block3Div.id = "thirdStatBlock" + drawedStats;
-    subIdToSelect[2] = "#" + block3Div.id;
-    block3Div.className = "statssection";
-    document.getElementById("statContainer" + drawedStats).appendChild(block3Div);
-
-    var svgLoading = d3.select(subIdToSelect[1]).append("svg")
-        .attr("class", "loading")
-        .attr("preserveAspectRatio", "xMinYMin meet")
-        .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal);
-
-    // A loading text
-    svgLoading.append("text")
-        .attr("id", "loadingtext")
-        .attr("x", function (d) { return widthStatBlockTotal / 2; })
-        .attr("y", function (d) { return heightStatBlockTotal / 2 - 50; })
-        .style("text-anchor", "middle")
-        .attr("fill", textColor)
-        .attr("opacity", 1)
-        .attr("font-size", "2em")
-        .text(loadingText);
-
-    // A loading spinner
-    var radius = spinnerRadius;
-    var tau = 2 * Math.PI;
-    var arc = d3.arc()
-        .innerRadius(radius * 0.45)
-        .outerRadius(radius * 0.55)
-        .startAngle(0);
-    var spinner = svgLoading.append("g")
-        .attr("transform", "translate(" + widthStatBlockTotal / 2 + "," + (heightStatBlockTotal / 2) + ")")
-        .attr("id", "spinner")
-        .attr("opacity", 0.9)
-    spinner.append("path")
-        .datum({ endAngle: 0.75 * tau })
-        .style("fill", textColor)
-        .attr("d", arc)
-        .call(spin, 1500)
-
     var modes = document.getElementById("modes")
     var mode;
     for (var i = 0; i < modes.length; i++) {
@@ -719,9 +719,9 @@ function updateData() {
     // Clean from any previous visualization
     d3.selectAll(".bar").remove();
     d3.selectAll(".axis").remove();
-    d3.selectAll(".stats").remove();
-    d3.select(".loading").remove();
-    d3.selectAll("g").remove();
+    // Remove the generated divs
+    var statsCointainer = document.getElementById("statsList");
+    while (statsCointainer.firstChild) statsCointainer.removeChild(statsCointainer.firstChild);
 
     var modes = document.getElementById("modes");
     var mode;
