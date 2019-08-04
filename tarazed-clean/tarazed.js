@@ -348,15 +348,24 @@ function drawStats(mode, time) {
     block3Div.className = "statssection";
     document.getElementById("statsMain" + drawedStats).appendChild(block3Div);
 
-    var svgLoading = d3.select("#statsMain" + drawedStats).append("svg")
-        .attr("class", "loading")
+    // 3 svgs to fill the entire div
+    var svgLoading = d3.select("#secondStatBlock" + drawedStats).append("svg")
+        .attr("id", "loading" + drawedStats)
         .attr("preserveAspectRatio", "xMinYMin meet")
-        .attr("viewBox", "0 0 " + widthTotal + " " + heightStatBlockTotal);
+        .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal);
+    d3.select("#firstStatBlock" + drawedStats).append("svg")
+        .attr("id", "loading" + drawedStats)
+        .attr("preserveAspectRatio", "xMinYMin meet")
+        .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal);
+    d3.select("#thirdStatBlock" + drawedStats).append("svg")
+        .attr("id", "loading" + drawedStats)
+        .attr("preserveAspectRatio", "xMinYMin meet")
+        .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal);
 
     // A loading text
     svgLoading.append("text")
         .attr("id", "loadingtext")
-        .attr("x", function (d) { return widthTotal / 2; })
+        .attr("x", function (d) { return widthStatBlockTotal / 2; })
         .attr("y", function (d) { return heightStatBlockTotal / 2 - 50; })
         .style("text-anchor", "middle")
         .attr("fill", textColor)
@@ -372,7 +381,7 @@ function drawStats(mode, time) {
         .outerRadius(radius * 0.55)
         .startAngle(0);
     var spinner = svgLoading.append("g")
-        .attr("transform", "translate(" + widthTotal / 2 + "," + (heightStatBlockTotal / 2) + ")")
+        .attr("transform", "translate(" + widthStatBlockTotal / 2 + "," + (heightStatBlockTotal / 2) + ")")
         .attr("id", "spinner")
         .attr("opacity", 0.9)
     spinner.append("path")
@@ -390,7 +399,7 @@ function drawStats(mode, time) {
         drawDonutCompletedFailed(json, subIdToSelect);
         drawGeneralStats(json, mode, time, subIdToSelect);
         // Remove the loading
-        d3.select(".loading").remove();
+        d3.selectAll("#loading" + drawedStats).remove();
     });
 }
 
