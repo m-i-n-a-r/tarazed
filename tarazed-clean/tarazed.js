@@ -407,6 +407,7 @@ function drawStats(mode, time) {
         .attr("id", "loading" + drawedStats)
         .attr("preserveAspectRatio", "xMinYMin meet")
         .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal);
+    subIdToSelect[3] = "#loading" + drawedStats;
 
     // A loading text
     svgLoading.append("text")
@@ -444,8 +445,7 @@ function drawStats(mode, time) {
         drawDonutLocation(json, subIdToSelect);
         drawDonutCompletedFailed(json, subIdToSelect);
         drawGeneralStats(json, mode, time, subIdToSelect);
-        // Remove the loading
-        d3.selectAll("#loading" + drawedStats).remove();
+        // The loading is removed inside each function
     });
 }
 
@@ -533,6 +533,9 @@ function drawDonutLocation(json, subIdToSelect) {
         .text("Launch location")
         .style("font-size", "1.2em")
         .style("text-anchor", "middle");
+
+    // Remove the loading using the id is the only way to avoid weird behaviors, do it in one of the subcharts is enough
+    d3.selectAll(subIdToSelect[3]).remove();
 
     // Avoid overlapping labels 
     var labels = label._groups[0],
