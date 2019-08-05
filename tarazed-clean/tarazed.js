@@ -204,10 +204,10 @@ function decadeAggregateData(data) {
 
 function lspAggregateData(data) {
     const launches = data.launches;
-    // Aggregate data by launch service provider
+    // Aggregate data by launch service provider, specifying country
     lspAggregate = d3.nest()
-        .key(function (d) { return d.lsp.name; })
-        .rollup(function (v) { return v.length; })
+        .key(function (d) { return d.lsp.countryCode + " " + d.lsp.name; })
+        .rollup(function(v) { return v.length; })
         .entries(launches);
     return lspAggregate;
 }
@@ -232,6 +232,16 @@ function statusAggregateData(data) {
             else return "failed";
         })
         .rollup(function (v) { return v.length; })
+        .entries(launches);
+    return statusAggregate;
+}
+
+function rocketTypeAggregateData(data) {
+    const launches = data.launches;
+    // Aggregate data by rocket type
+    statusAggregate = d3.nest()
+        .key(function (d) { return d.rocket.familyname; })
+        .rollup(function(v) { return v.length; })
         .entries(launches);
     return statusAggregate;
 }
@@ -353,7 +363,7 @@ function resetStats() {
         const c = document.documentElement.scrollTop || document.body.scrollTop;
         if (c > 0) {
           window.requestAnimationFrame(scrollToTop);
-          window.scrollTo(0, c - c / 16);
+          window.scrollTo(0, c - c / 14);
         }
       };
     scrollToTop();
@@ -445,7 +455,7 @@ function drawStats(mode, time) {
         drawDonutLocation(json, subIdToSelect);
         drawDonutCompletedFailed(json, subIdToSelect);
         drawGeneralStats(json, mode, time, subIdToSelect);
-        // The loading is removed inside each function
+        // The loading is removed inside drawDonutLocation
     });
 }
 
@@ -670,11 +680,18 @@ function drawDonutCompletedFailed(json, subIdToSelect) {
 
 // Draw some general statistics: selected time, total launches, most active lsp
 function drawGeneralStats(json, mode, time, subIdToSelect) {
-    aggregateDict = lspAggregateData(json);
-    var data = [];
-    for (key in aggregateDict) data.push(aggregateDict[key].value);
-    var bestObj = Math.max.apply(Math, aggregateDict.map(function (o) { return o.value; }));
-    var bestLsp = aggregateDict.find(function (o) { return o.value == bestObj; });
+    aggregateDictLsp = lspAggregateData(json);
+    aggregateDictRocket = rocketTypeAggregateData(json);
+    var dataLsp = [];
+    var dataRocket = [];
+    
+    for (key in aggregateDictLsp) dataLsp.push(aggregateDictLsp[key].value);
+    var bestObjLsp = Math.max.apply(Math, aggregateDictLsp.map(function (o) { return o.value; }));
+    var bestLsp = aggregateDictLsp.find(function (o) { return o.value == bestObjLsp; });
+    
+    for (key in aggregateDictRocket) dataRocket.push(aggregateDictRocket[key].value);
+    var bestObjRocket = Math.max.apply(Math, aggregateDictRocket.map(function (o) { return o.value; }));
+    var bestRocket = aggregateDictRocket.find(function (o) { return o.value == bestObjRocket; });
 
     var svgGeneralStats = d3.select(subIdToSelect[1]).append("svg")
         .attr("class", "stats")
@@ -683,41 +700,61 @@ function drawGeneralStats(json, mode, time, subIdToSelect) {
 
     svgGeneralStats.append("text")
         .attr("class", "generalStatsText")
-        .attr("dy", heightStatBlockTotal / 2 - 50)
+        .attr("dy", heightStatBlockTotal / 2 - 85)
         .attr("dx", widthStatBlockTotal / 2)
         .attr("font-weight", 700)
         .attr("fill", highlightColor)
         .text(function () { return (mode + " " + time).toUpperCase(); })
-        .style("font-size", "2.5em")
+        .style("font-size", "2.2em")
         .style("text-anchor", "middle");
 
     svgGeneralStats.append("text")
         .attr("class", "generalStatsText")
-        .attr("dy", heightStatBlockTotal / 2 - 10)
+        .attr("dy", heightStatBlockTotal / 2 - 45)
         .attr("dx", widthStatBlockTotal / 2)
         .attr("font-weight", 700)
         .attr("fill", textColor)
-        .text(function () { return "Total launches: " + data.reduce((a, b) => a + b, 0); })
+        .text(function () { return "Total launches: " + dataLsp.reduce((a, b) => a + b, 0); })
         .style("font-size", "1.6em")
         .style("text-anchor", "middle");
 
     svgGeneralStats.append("text")
         .attr("class", "generalStatsText")
-        .attr("dy", heightStatBlockTotal / 2 + 50)
+        .attr("dy", heightStatBlockTotal / 2 + 5)
         .attr("dx", widthStatBlockTotal / 2)
         .attr("font-weight", 700)
         .attr("fill", textColor)
-        .text(function () { return "Best LSP: " + bestLsp.key })
+        .text(function () { return "Best LSP: " + bestLsp.key.substring(4,); })
         .style("font-size", "1.2em")
         .style("text-anchor", "middle");
 
     svgGeneralStats.append("text")
         .attr("class", "generalStatsText")
-        .attr("dy", heightStatBlockTotal / 2 + 80)
+        .attr("dy", heightStatBlockTotal / 2 + 35)
         .attr("dx", widthStatBlockTotal / 2)
         .attr("font-weight", 700)
         .attr("fill", textColor)
-        .text(function () { return "with " + bestLsp.value + " scheduled launches"; })
+        .text(function () { return "from " + bestLsp.key.substring(0,3) + " with " + bestLsp.value + " scheduled launches"; })
+        .style("font-size", "1.2em")
+        .style("text-anchor", "middle");
+
+    svgGeneralStats.append("text")
+        .attr("class", "generalStatsText")
+        .attr("dy", heightStatBlockTotal / 2 + 85)
+        .attr("dx", widthStatBlockTotal / 2)
+        .attr("font-weight", 700)
+        .attr("fill", textColor)
+        .text(function () { return "Most used rocket family: " + bestRocket.key; })
+        .style("font-size", "1.2em")
+        .style("text-anchor", "middle");
+    
+    svgGeneralStats.append("text")
+        .attr("class", "generalStatsText")
+        .attr("dy", heightStatBlockTotal / 2 + 110)
+        .attr("dx", widthStatBlockTotal / 2)
+        .attr("font-weight", 700)
+        .attr("fill", textColor)
+        .text(function () { return "with " + bestRocket.value + " rockets launched"; })
         .style("font-size", "1.2em")
         .style("text-anchor", "middle");
 }

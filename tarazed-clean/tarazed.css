@@ -58,15 +58,15 @@ h5 {
 
 /* Axes color */
 .axis line {
-    stroke:#555;
+    stroke:#777;
 }
 
 .axis path {
-    stroke:#555;
+    stroke:#777;
 }
 
 .axis text {
-    fill:#555;
+    fill:#777;
 }
 
 /* Responsive stats */  
@@ -74,7 +74,7 @@ h5 {
     overflow-x: hidden; /* Avoid to show the horizontal scrollbar when clearstats is pressed */
     display: flex;
     padding: 0;
-    margin-top: 30px;
+    margin-top: 15px;
 }
   
 .statssection {
