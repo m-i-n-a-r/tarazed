@@ -236,14 +236,28 @@ function statusAggregateData(data) {
     return statusAggregate;
 }
 
+function statusCountryAggregateData(data) {
+    const launches = data.launches;
+    // Aggregate data by status and if failed distinguish the countries
+    statusCountryAggregate = d3.nest()
+        .key(function (d) {
+            if (d.status == 1 || d.status == 3) return "complete";
+            if (d.status == 2) return "uncertain";
+            else return d.lsp.countryCode + " failed";
+        })
+        .rollup(function (v) { return v.length; })
+        .entries(launches);
+    return statusCountryAggregate;
+}
+
 function rocketTypeAggregateData(data) {
     const launches = data.launches;
     // Aggregate data by rocket type
-    statusAggregate = d3.nest()
+    rocketTypeAggregate = d3.nest()
         .key(function (d) { return d.rocket.familyname; })
         .rollup(function(v) { return v.length; })
         .entries(launches);
-    return statusAggregate;
+    return rocketTypeAggregate;
 }
 
 // Draw a barchart depending on the aggregation choice
@@ -486,9 +500,9 @@ function drawDonutLocation(json, subIdToSelect) {
         "NZL": "#e38282"
     }
     // Alternative colors for countries not found in color
-    var altColor = ["#aaaaaa", "#e0bbe4", "#957dad", "#d291bc", "#e59dea"];
-    var pie = d3.pie().startAngle(-0.3 * Math.PI).value(d => d);
-    var arc = d3.arc().innerRadius(radius * 0.85).outerRadius(radius * 0.65);
+    var altColor = ["#aaaaaa", "#e0bbe4", "#957dad", "#d291bc", "#e59dea"],
+        pie = d3.pie().startAngle(-0.3 * Math.PI).value(d => d),
+        arc = d3.arc().innerRadius(radius * 0.85).outerRadius(radius * 0.65);
 
     // Select one of the 3 sub-areas of the stats
     var svgStats = d3.select(subIdToSelect[0]).append("svg")
@@ -615,6 +629,7 @@ function drawDonutLocation(json, subIdToSelect) {
 function drawDonutCompletedFailed(json, subIdToSelect) {
     var radius = Math.min(widthStatBlock, heightStatBlock) / 2;
     // Get an array of numbers from a dynamical query to the site
+    // Use statusCountryAggregateData to separate the failed launches by country
     aggregateDict = statusAggregateData(json);
     // Calculate the percentages and the values
     var data = [],
@@ -630,8 +645,10 @@ function drawDonutCompletedFailed(json, subIdToSelect) {
         "failed":  "#ca7b49",
         "complete": "#98abc5"
     }
-    var pie = d3.pie().startAngle(-0.3 * Math.PI).value(d => d);
-    var arc = d3.arc().innerRadius(radius * 0.85).outerRadius(radius * 0.65);
+    // Alternative colors for values not found in color
+    var altColor = ["#aaaaaa", "#e0bbe4", "#957dad", "#d291bc", "#e59dea"],
+        pie = d3.pie().startAngle(-0.3 * Math.PI).value(d => d),
+        arc = d3.arc().innerRadius(radius * 0.85).outerRadius(radius * 0.65);
 
     // Select one of the 3 sub-areas of the stats
     var svgStats = d3.select(subIdToSelect[2]).append("svg")
@@ -649,7 +666,10 @@ function drawDonutCompletedFailed(json, subIdToSelect) {
         .enter()
         .append("path")
         .attr("d", arc)
-        .attr("fill", (d, i) => color[aggregateDict[i].key]);
+        .attr("fill", function(d, i) {
+            if(color[aggregateDict[i].key] != undefined) return color[aggregateDict[i].key];
+            else return altColor[i % 5];
+        });
     svgStats.append("g").classed("labels", true);
     svgStats.append("g").classed("lines", true);
 
@@ -658,7 +678,10 @@ function drawDonutCompletedFailed(json, subIdToSelect) {
         .data(pie(data))
         .enter().append("polyline")
         .style("opacity", 1)
-        .style("stroke", (d, i) => color[aggregateDict[i].key])
+        .style("stroke", function(d, i) {
+            if(color[aggregateDict[i].key] != undefined) return color[aggregateDict[i].key];
+            else return altColor[i % 5];
+        })
         .style("stroke-width", 3)
         .attr("points", function (d) {
             var pos = outerArc.centroid(d);
@@ -669,16 +692,20 @@ function drawDonutCompletedFailed(json, subIdToSelect) {
     var label = svgStats.select(".labels").selectAll("text")
         .data(pie(data))
         .enter().append("text")
+        .attr("x", function (d, i) {
+            var pos = outerArc.centroid(d);
+            pos[0] = radius * 1.10 * (midAngle(d) < Math.PI ? 1 : -1);
+            return pos[0];
+        })
+        .attr("y", function (d, i) {
+            var pos = outerArc.centroid(d);
+            return pos[1];
+        })
         .attr("dy", ".35em")
         .attr("font-weight", 700)
         .attr("fill", textColor)
         .style("font-size", "1.1em")
         .text(function (d, i) { return d.data + " " + aggregateDict[i].key + " | " + percentages[i] + "%"; })
-        .attr("transform", function (d) {
-            var pos = outerArc.centroid(d);
-            pos[0] = radius * 1.10 * (midAngle(d) < Math.PI ? 1 : -1);
-            return "translate(" + pos + ")";
-        })
         .style("text-anchor", function (d) {
             return (midAngle(d)) < Math.PI ? "start" : "end";
         });
@@ -692,6 +719,53 @@ function drawDonutCompletedFailed(json, subIdToSelect) {
         .text("Launch status")
         .style("font-size", "1.2em")
         .style("text-anchor", "middle");
+
+    // Avoid overlapping labels 
+    var labels = label._groups[0],
+        alpha = 0.3,
+        spacing = 20;
+
+    function relax() {
+        var again = false;
+        label.each(function (d, i) {
+            var a = this,
+                da = d3.select(a),
+                y1 = da.attr("y");
+            x1 = da.attr("x");
+            label.each(function (d, j) {
+                var b = this;
+                if (a === b) return;
+                db = d3.select(b);
+                if (da.attr("text-anchor") !== db.attr("text-anchor")) return;
+                var y2 = db.attr("y");
+                var x2 = db.attr("x");
+                if (x1 != x2) return;
+                deltaY = y1 - y2;
+                if (Math.abs(deltaY) > spacing) return;
+                again = true;
+                sign = deltaY > 0 ? 1 : -1;
+                var adjust = sign * alpha;
+                da.attr("y", +y1 + adjust);
+                db.attr("y", +y2 - adjust);
+            });
+        });
+
+        if (again) {
+            var labelElements = labels;
+            // Pos[0] means the x coordinate of the pos point
+            polyline.attr("points", function (d, i) {
+                var pos = outerArc.centroid(d);
+                pos[0] = radius * 1.05 * (midAngle(d) < Math.PI ? 1 : -1);
+                var labelForLine = d3.select(labelElements[i]);
+                pos[1] = labelForLine.attr("y");
+                var pos2 = outerArc.centroid(d);
+                pos2[1] = labelForLine.attr("y");
+                return [arc.centroid(d), pos2, pos]
+            });
+            setTimeout(relax, 20);
+        }
+    }
+    relax();
 }
 
 // Draw some general statistics: selected time, total launches, most active lsp
