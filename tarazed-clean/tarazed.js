@@ -473,10 +473,20 @@ function drawDonutLocation(json, subIdToSelect) {
         percentages.push((Math.round(aggregateDict[key].value / valueSum * 1000) / 10));
     }
 
-    var color = d3.scaleOrdinal()
-        .domain(data)
-        // Colors used in the donut chart
-        .range(["#a63fa1", "#ca7b49", "#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#aaaaaa"])
+    // Use the same color for the most famous launch locations
+    var color = {
+        "USA": "#a63fa1",
+        "CHN": "#ca7b49",
+        "KAZ": "#98abc5",
+        "GUF": "#8a89a6",
+        "RUS": "#7b6888",
+        "IND": "#6b486b",
+        "JPN": "#c1c1d6",
+        "UNK": "#f3a35c",
+        "NZL": "#e38282"
+    }
+    // Alternative colors for countries not found in color
+    var altColor = ["#aaaaaa", "#e0bbe4", "#957dad", "#d291bc", "#e59dea"];
     var pie = d3.pie().startAngle(-0.3 * Math.PI).value(d => d);
     var arc = d3.arc().innerRadius(radius * 0.85).outerRadius(radius * 0.65);
 
@@ -496,7 +506,10 @@ function drawDonutLocation(json, subIdToSelect) {
         .enter()
         .append("path")
         .attr("d", arc)
-        .attr("fill", (d, i) => color(i));
+        .attr("fill", function(d, i) {
+            if (color[aggregateDict[i].key] != undefined) return color[aggregateDict[i].key]
+            else return altColor[i % 5];
+        });
     svgStats.append("g").classed("labels", true);
     svgStats.append("g").classed("lines", true);
 
@@ -505,7 +518,10 @@ function drawDonutLocation(json, subIdToSelect) {
         .data(pie(data))
         .enter().append("polyline")
         .style("opacity", 1)
-        .style("stroke", (d, i) => color(i))
+        .style("stroke", function(d, i) {
+            if (color[aggregateDict[i].key] != undefined) return color[aggregateDict[i].key]
+            else return altColor[i % 5];
+        })
         .style("stroke-width", 3)
         .attr("points", function (d) {
             var pos = outerArc.centroid(d);
