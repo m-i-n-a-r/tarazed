@@ -365,6 +365,10 @@ function drawStats(mode, time) {
     var startDate = time + "-01-01",
         endDate,
         subIdToSelect = [];
+    
+    // Useful to draw only the right number of stats 
+    drawedStats++;
+    if (drawedStats >= maxDrawableStats) d3.selectAll(".bar").on("click", null);
 
     // Append the necessary elements to the DOM instead of declaring them manually
     var statsMain = document.createElement("div");
@@ -451,7 +455,13 @@ function drawDonutLocation(json, subIdToSelect) {
     // Get an array of numbers from a dynamical query to the site
     aggregateDict = locationAggregateData(json);
     var data = [];
-    for (key in aggregateDict) data.push(aggregateDict[key].value)
+        valueSum = Object.keys(aggregateDict).reduce((sum,key) => sum + parseFloat(aggregateDict[key].value || 0), 0),
+        percentages = [];
+
+    for (key in aggregateDict) { 
+        data.push(aggregateDict[key].value);
+        percentages.push((Math.round(aggregateDict[key].value / valueSum * 1000) / 10));
+    }
 
     var color = d3.scaleOrdinal()
         .domain(data)
@@ -509,7 +519,7 @@ function drawDonutLocation(json, subIdToSelect) {
         .attr("font-weight", 700)
         .attr("fill", textColor)
         .style("font-size", ".95em")
-        .text(function (d, i) { return d.data + " | " + aggregateDict[i].key; })
+        .text(function (d, i) { return d.data + " | " + aggregateDict[i].key + " | " + percentages[i] + "%"; })
         .style("text-anchor", function (d) {
             return (midAngle(d)) < Math.PI ? "start" : "end";
         });
@@ -583,7 +593,7 @@ function drawDonutCompletedFailed(json, subIdToSelect) {
         percentages = [];
     for (key in aggregateDict) { 
         data.push(aggregateDict[key].value);
-        percentages.push(Math.round(aggregateDict[key].value / valueSum * 100));
+        percentages.push((Math.round(aggregateDict[key].value / valueSum * 1000) / 10));
     }
     // Since there are 3 possible values, the colors are specified manually for each value
     var color = {
@@ -726,10 +736,6 @@ function barClick() {
 
     // Delete the stats placeholder
     d3.select("#statsPlaceholder").remove();
-
-    // Useful to draw only the right number of stats 
-    drawedStats++;
-    if (drawedStats >= maxDrawableStats) d3.selectAll(".bar").on("click", null);
 
     var modes = document.getElementById("modes")
     var mode;
