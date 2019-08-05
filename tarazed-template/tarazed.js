@@ -2,71 +2,114 @@
 // D3 is imported in the html file, where this script is executed
 // Some useful variables, all in the same place to simplify the configuration
 
-var idToSelect = ["#tarazed1", "#tarazed2", "#tarazed3", "#tarazed4"];
-var margin = { top: 20, right: 20, bottom: 60, left: 50 },
+var idToSelect = "#tarazed",
+    margin = { top: 20, right: 20, bottom: 60, left: 50 },
     width = 1800 - margin.left - margin.right,
     height = 600 - margin.top - margin.bottom,
     widthTotal = 1800,
-    heightTotal = 600;
-var marginStatBlock = { top: 20, right: 20, bottom: 30, left: 40 },
+    heightTotal = 600,
+    marginStatBlock = { top: 20, right: 20, bottom: 30, left: 40 },
     widthStatBlock = 600 - marginStatBlock.left - marginStatBlock.right,
-    heightStatBlock = 330 - marginStatBlock.top - marginStatBlock.bottom,
+    heightStatBlock = 280 - marginStatBlock.top - marginStatBlock.bottom,
     widthStatBlockTotal = 600,
-    heightStatBlockTotal = 330;
-var x = d3.scaleBand()
-    .range([0, width])
-    .padding(0.1);
-var y = d3.scaleLinear()
-    .range([height, 0]);
-var textColor = "#aaaaaa";
-var futureEntriesColor = "rgba(150, 150, 150, 0.8)";
-var highlightColor = "#7da1e8";
-var loadingText = "...fetching results...";
-var spinnerRadius = 50;
-var limit = 3000; // Takes up to this number of launches
-var baseUrl = "https://launchlibrary.net/1.4/launch?mode=list"; // Verbose, list or summary
-var finalPageUrl = baseUrl + "&limit=" + limit;
-var nextLaunchUrl = "https://launchlibrary.net/1.4/launch/next/1";
-var storedData;
-var decadeAggregatedData;
-var yearlyAggregatedData;
-var monthlyAggregatedData;
-var lspAggregatedData;
-var locationAggregatedData;
+    heightStatBlockTotal = 250,
+    x = d3.scaleBand().range([0, width]).padding(0.1),
+    y = d3.scaleLinear().range([height, 0]),
+    maxDrawableStats = 100,
+    drawedStats = 0,
+    textColor = "#aaaaaa",
+    futureEntriesColor = "rgba(150, 150, 150, 0.8)",
+    highlightColor = "#7da1e8",
+    loadingText = "...fetching results...",
+    spinnerRadius = 50,
+    launchLimit = 3000, // Takes up to this number of launches
+    baseUrl = "https://launchlibrary.net/1.4/launch?mode=list", // Verbose, list or summary
+    finalPageUrl = baseUrl + "&limit=" + launchLimit,
+    nextLaunchUrl = "https://launchlibrary.net/1.4/launch/next/1",
+    svg,
+    storedData,
+    decadeAggregatedData,
+    yearlyAggregatedData,
+    monthlyAggregatedData,
+    lspAggregatedData,
+    locationAggregatedData;
 
-// The main containers, they should scale to fit the screen div size
-var svg = d3.select(idToSelect[0]).append("svg")
-    .attr("preserveAspectRatio", "xMinYMin meet")
-    .attr("viewBox", "0 0 " + widthTotal + " " + heightTotal)
+function tarazed() {
+    // Update the barchart if the mode changes
+    d3.select("#modes").on("change", updateData);
 
-// A loading text
-svg.append("text")
-    .attr("id", "loadingtext")
-    .attr("x", function (d) { return widthTotal / 2; })
-    .attr("y", function (d) { return heightTotal / 2; })
-    .style("text-anchor", "middle")
-    .attr("fill", textColor)
-    .attr("opacity", 1)
-    .attr("font-size", "3em")
-    .text(loadingText);
+    // The main containers, they should scale to fit the screen div size
+    svg = d3.select(idToSelect).append("svg")
+        .attr("preserveAspectRatio", "xMinYMin meet")
+        .attr("viewBox", "0 0 " + widthTotal + " " + heightTotal)
 
-// A loading spinner
-var radius = spinnerRadius;
-var tau = 2 * Math.PI;
-var arc = d3.arc()
-    .innerRadius(radius * 0.7)
-    .outerRadius(radius * 0.9)
-    .startAngle(0);
-var spinner = svg.append("g")
-    .attr("transform", "translate(" + widthTotal / 2 + "," + (heightTotal / 2 + 80) + ")")
-    .attr("id", "spinner")
-    .attr("opacity", 0.9)
-var background = spinner.append("path")
-    .datum({ endAngle: 0.75 * tau })
-    .style("fill", textColor)
-    .attr("d", arc)
-    .call(spin, 1500)
+    // A loading text
+    svg.append("text")
+        .attr("id", "loadingtext")
+        .attr("x", function (d) { return widthTotal / 2; })
+        .attr("y", function (d) { return heightTotal / 2; })
+        .style("text-anchor", "middle")
+        .attr("fill", textColor)
+        .attr("opacity", 1)
+        .attr("font-size", "3em")
+        .text(loadingText);
 
+    // A loading spinner
+    var radius = spinnerRadius;
+    var tau = 2 * Math.PI;
+    var arc = d3.arc()
+        .innerRadius(radius * 0.7)
+        .outerRadius(radius * 0.9)
+        .startAngle(0);
+    var spinner = svg.append("g")
+        .attr("transform", "translate(" + widthTotal / 2 + "," + (heightTotal / 2 + 80) + ")")
+        .attr("id", "spinner")
+        .attr("opacity", 0.9)
+    var background = spinner.append("path")
+        .datum({ endAngle: 0.75 * tau })
+        .style("fill", textColor)
+        .attr("d", arc)
+        .call(spin, 1500)
+
+    // Get a gigantic json containing every launch in history
+    d3.json(finalPageUrl, json => {
+        // Remove the "loading" screen, show the mode radio buttons
+        d3.select("#loadingtext").transition("removeLoadingText")
+            .duration(500)
+            .attr("opacity", 0)
+            .remove();
+        d3.select("#spinner").transition("removeLoadingSpinner")
+            .duration(500)
+            .attr("opacity", 0)
+            .remove();
+        document.getElementById("modes").style.display = "block";
+        // Stats placeholder
+        createStatsPlaceholder();
+
+        // Check internet connection
+        if (json == undefined || json == null) {
+            svg.append("text")
+                .attr("class", "noInternetText")
+                .attr("dy", heightTotal / 2 - 50)
+                .attr("dx", widthTotal / 2)
+                .attr("font-weight", 700)
+                .attr("fill", textColor)
+                .text("NO INTERNET CONNECTION!")
+                .style("font-size", "3em")
+                .style("text-anchor", "middle");
+        }
+        // Store the data for future uses
+        storeData(json);
+    });
+
+    // Get the next launch
+    d3.json(nextLaunchUrl, json => {
+        // Display next launch
+        displayNextLaunch(json);
+    });
+}
+
+// Needed for the loading spinner
 function spin(selection, duration) {
     selection.transition()
         .duration(duration)
@@ -76,11 +119,36 @@ function spin(selection, duration) {
     setTimeout(function () { spin(selection, duration); }, duration);
 }
 
+// Needed for the loading spinner
 function transitionFunction(path) {
     path.transition()
         .duration(7500)
         .attrTween("stroke-dasharray", tweenDash)
         .each("end", function () { d3.select(this).call(transition); });
+}
+
+// A placeholder for the stats, if needed
+function createStatsPlaceholder() {
+    var statsPlaceholder = document.createElement("div");
+    statsPlaceholder.id = "statsPlaceholder";
+    document.getElementsByTagName("body")[0].appendChild(statsPlaceholder);
+        
+    svgStatsPlaceholder = d3.select("#statsPlaceholder").append("svg")
+        .attr("preserveAspectRatio", "xMinYMin meet")
+        .attr("viewBox", "0 0 " + widthTotal + " " + heightStatBlockTotal)
+        .append("text")
+        .attr("x", function (d) { return widthTotal / 2; })
+        .attr("y", function (d) { return heightStatBlockTotal / 2 + 50; })
+        .style("text-anchor", "middle")
+        .attr("fill", textColor)
+        .attr("font-weight", 700)
+        .attr("font-size", "2em")
+        .attr("opacity", 0)
+        .text("Select a bar to see its details")
+        .transition()
+        .duration(600)
+        .attr("opacity", 1)
+        .on("end", function() { d3.selectAll(".bar").on("click", barClick); });
 }
 
 // Given its data, display the next launch
@@ -110,41 +178,6 @@ function displayNextLaunch(data) {
     }, 1000);
 }
 
-// Get a gigantic json containing every launch in history
-d3.json(finalPageUrl, json => {
-    // Remove the "loading" screen, show the mode radio buttons
-    d3.select("#loadingtext").transition("removeLoadingText")
-        .duration(500)
-        .attr("opacity", 0)
-        .remove();
-    d3.select("#spinner").transition("removeLoadingSpinner")
-        .duration(500)
-        .attr("opacity", 0)
-        .remove();
-    document.getElementById("modes").style.display = "block";
-
-    // Check internet connection
-    if (json == undefined || json == null) {
-        svg.append("text")
-            .attr("class", "noInternetText")
-            .attr("dy", heightTotal / 2 - 50)
-            .attr("dx", widthTotal / 2)
-            .attr("font-weight", 700)
-            .attr("fill", textColor)
-            .text("NO INTERNET CONNECTION!")
-            .style("font-size", "3em")
-            .style("text-anchor", "middle");
-    }
-    // Store the data for future uses
-    storeData(json);
-});
-
-// Get the next launch
-d3.json(nextLaunchUrl, json => {
-    // Display next launch
-    displayNextLaunch(json);
-});
-
 // Data aggregation functions
 function yearlyAggregateData(data) {
     const launches = data.launches;
@@ -171,10 +204,10 @@ function decadeAggregateData(data) {
 
 function lspAggregateData(data) {
     const launches = data.launches;
-    // Aggregate data by launch service provider
+    // Aggregate data by launch service provider, specifying country
     lspAggregate = d3.nest()
-        .key(function (d) { return d.lsp.name; })
-        .rollup(function (v) { return v.length; })
+        .key(function (d) { return d.lsp.countryCode + " " + d.lsp.name; })
+        .rollup(function(v) { return v.length; })
         .entries(launches);
     return lspAggregate;
 }
@@ -199,6 +232,16 @@ function statusAggregateData(data) {
             else return "failed";
         })
         .rollup(function (v) { return v.length; })
+        .entries(launches);
+    return statusAggregate;
+}
+
+function rocketTypeAggregateData(data) {
+    const launches = data.launches;
+    // Aggregate data by rocket type
+    statusAggregate = d3.nest()
+        .key(function (d) { return d.rocket.familyname; })
+        .rollup(function(v) { return v.length; })
         .entries(launches);
     return statusAggregate;
 }
@@ -235,12 +278,26 @@ function drawChartAggregate(data, mode) {
         .on("click", barClick)
         .transition("bar spawning")
         .duration(250)
-        .delay(function (d, i) { return i * 50; })
+        .delay(function (d, i) { 
+            if(mode === "year") return i * 20;
+            if(mode === "decade") return i * 100
+            else return i * 50; 
+        })
         .attr("y", function (d) { return y(d.value); })
         .attr("height", function (d, i) { return height - y(d.value); });
 
     // Add the x Axis: the text changes between year and decade views
-    if (mode === "year") {
+    if (mode === "decade") {
+        g.append("g")
+            .attr("transform", "translate(" + 0 + "," + (height) + ")")
+            .attr("class", "axis")
+            .call(d3.axisBottom(x))
+            .selectAll("text")
+            .attr("font-weight", 700)
+            .style("font-size", "1.8em");
+    }
+
+    else {
         g.append("g")
             .attr("transform", "translate(" + 0 + "," + (height) + ")")
             .attr("class", "axis")
@@ -250,16 +307,6 @@ function drawChartAggregate(data, mode) {
             .attr("dx", "-.8em")
             .attr("dy", "-.55em")
             .attr("transform", "rotate(-90)")
-            .attr("font-weight", 700)
-            .style("font-size", "1.8em");
-    }
-
-    if (mode === "decade") {
-        g.append("g")
-            .attr("transform", "translate(" + 0 + "," + (height) + ")")
-            .attr("class", "axis")
-            .call(d3.axisBottom(x))
-            .selectAll("text")
             .attr("font-weight", 700)
             .style("font-size", "1.8em");
     }
@@ -276,55 +323,175 @@ function drawChartAggregate(data, mode) {
 
 // Delete every visualized year/decade
 function resetStats() {
-    d3.selectAll(".stats").transition("removeStats")
-        .duration(1000) // This transition doesn't work atm (obviously)
-        .attr("opacity", 0)
-        .remove();
-    d3.selectAll(".bar")
-        .on("click", barClick)
-        .transition("deblink")
-        .duration(200)
-        .style("opacity", 1.0);
+    // Don't execute when there's nothing to reset
+    if (d3.select(".stats").empty()) return;
+
+    d3.selectAll(".bar").on("click", null);
+    var n = 0;
+    drawedStats = 0;
+
+    // Workaround to execute the end callback a single time
+    d3.selectAll(".stats")
+        .each(function() { n++; })
+        .transition("removeStats")
+        .duration(1000)
+        .delay(function (d, i) { return (i / 3 * 100); })
+        .attr("transform", "translate(" + widthTotal + ")")
+        .on('end', function() {
+            n--;
+            if (!n) endall();
+        })
+     
+    function endall() {
+        // Remove the generated divs
+        var statsCointainer = document.getElementById("statsList");
+        while (statsCointainer.firstChild) statsCointainer.removeChild(statsCointainer.firstChild);
+        // Recreate the stats placeholder
+        createStatsPlaceholder();
+        // Reset interactions
+        d3.selectAll(".bar")
+            //.on("click", barClick) Used if statsPlaceholder is removed
+            .on("mouseover", barMouseover)
+            .on("mouseout", barMouseout)
+            .transition("deblink")
+            .duration(700)
+            .style("opacity", 1);
+    }
+    
+    // Autoscroll the page up (can be removed for bigger pages)
+    const scrollToTop = () => {
+        const c = document.documentElement.scrollTop || document.body.scrollTop;
+        if (c > 0) {
+          window.requestAnimationFrame(scrollToTop);
+          window.scrollTo(0, c - c / 14);
+        }
+      };
+    scrollToTop();
+
 }
 
 // Draw some stats and subplots for the chosen bar
 function drawStats(mode, time) {
-    var startDate = time + "-01-01";
-    var endDate;
+    var startDate = time + "-01-01",
+        endDate,
+        subIdToSelect = [];
+    
+    // Useful to draw only the right number of stats 
+    drawedStats++;
+    if (drawedStats >= maxDrawableStats) d3.selectAll(".bar").on("click", null);
+
+    // Append the necessary elements to the DOM instead of declaring them manually
+    var statsMain = document.createElement("div");
+    statsMain.id = "statsMain" + drawedStats;
+    statsMain.className = "statscontainer";
+    document.getElementById("statsList").appendChild(statsMain);
+
+    var block1Div = document.createElement("div");
+    block1Div.id = "firstStatBlock" + drawedStats;
+    subIdToSelect[0] = "#" + block1Div.id;
+    block1Div.className = "statssection";
+    document.getElementById("statsMain" + drawedStats).appendChild(block1Div);
+
+    var block2Div = document.createElement("div");
+    block2Div.id = "secondStatBlock" + drawedStats;
+    subIdToSelect[1] = "#" + block2Div.id;
+    block2Div.className = "statssection";
+    document.getElementById("statsMain" + drawedStats).appendChild(block2Div);
+
+    var block3Div = document.createElement("div");
+    block3Div.id = "thirdStatBlock" + drawedStats;
+    subIdToSelect[2] = "#" + block3Div.id;
+    block3Div.className = "statssection";
+    document.getElementById("statsMain" + drawedStats).appendChild(block3Div);
+
+    // 3 svgs to fill the entire div
+    var svgLoading = d3.select("#secondStatBlock" + drawedStats).append("svg")
+        .attr("id", "loading" + drawedStats)
+        .attr("preserveAspectRatio", "xMinYMin meet")
+        .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal);
+    d3.select("#firstStatBlock" + drawedStats).append("svg")
+        .attr("id", "loading" + drawedStats)
+        .attr("preserveAspectRatio", "xMinYMin meet")
+        .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal);
+    d3.select("#thirdStatBlock" + drawedStats).append("svg")
+        .attr("id", "loading" + drawedStats)
+        .attr("preserveAspectRatio", "xMinYMin meet")
+        .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal);
+    subIdToSelect[3] = "#loading" + drawedStats;
+
+    // A loading text
+    svgLoading.append("text")
+        .attr("id", "loadingtext")
+        .attr("x", function (d) { return widthStatBlockTotal / 2; })
+        .attr("y", function (d) { return heightStatBlockTotal / 2 - 50; })
+        .style("text-anchor", "middle")
+        .attr("fill", textColor)
+        .attr("opacity", 1)
+        .attr("font-size", "2em")
+        .text(loadingText);
+
+    // A loading spinner
+    var radius = spinnerRadius;
+    var tau = 2 * Math.PI;
+    var arc = d3.arc()
+        .innerRadius(radius * 0.45)
+        .outerRadius(radius * 0.55)
+        .startAngle(0);
+    var spinner = svgLoading.append("g")
+        .attr("transform", "translate(" + widthStatBlockTotal / 2 + "," + (heightStatBlockTotal / 2) + ")")
+        .attr("id", "spinner")
+        .attr("opacity", 0.9)
+    spinner.append("path")
+        .datum({ endAngle: 0.75 * tau })
+        .style("fill", textColor)
+        .attr("d", arc)
+        .call(spin, 1500)
 
     if (mode == "year") { endDate = time + "-12-31"; }
     if (mode == "decade") { endDate = (parseInt(time) + 9) + "-12-31"; }
     queryUrl = "https://launchlibrary.net/1.4/launch?mode=verbose&limit=9999&startdate=" + startDate + "&enddate=" + endDate;
     d3.json(queryUrl, json => {
         // Chosen stats: total launches, location pie chart, lsp pie chart, failed launches vs completed launches
-        drawDonutLocation(json);
-        drawDonutCompletedFailed(json);
-        drawGeneralStats(json, mode, time);
-        // Remove the loading
-        d3.select(".loading").remove();
-        // Reactivate the click events
-        d3.selectAll(".bar").on("click", barClick);
-        d3.select(this).on("click", null);
+        drawDonutLocation(json, subIdToSelect);
+        drawDonutCompletedFailed(json, subIdToSelect);
+        drawGeneralStats(json, mode, time, subIdToSelect);
+        // The loading is removed inside drawDonutLocation
     });
 }
 
-// Draw the subcharts
-function drawDonutLocation(json) {
+// Draw the location donut chart
+function drawDonutLocation(json, subIdToSelect) {
     var radius = Math.min(widthStatBlock, heightStatBlock) / 2;
     // Get an array of numbers from a dynamical query to the site
     aggregateDict = locationAggregateData(json);
     var data = [];
-    for (key in aggregateDict) data.push(aggregateDict[key].value)
+        valueSum = Object.keys(aggregateDict).reduce((sum,key) => sum + parseFloat(aggregateDict[key].value || 0), 0),
+        percentages = [];
 
-    var color = d3.scaleOrdinal()
-        .domain(data)
-        // Colors used in the donut chart
-        .range(["#a63fa1", "#ca7b49", "#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#aaaaaa"])
+    for (key in aggregateDict) { 
+        data.push(aggregateDict[key].value);
+        percentages.push((Math.round(aggregateDict[key].value / valueSum * 1000) / 10));
+    }
+
+    // Use the same color for the most famous launch locations
+    var color = {
+        "USA": "#a63fa1",
+        "CHN": "#ca7b49",
+        "KAZ": "#98abc5",
+        "GUF": "#8a89a6",
+        "RUS": "#7b6888",
+        "IND": "#6b486b",
+        "JPN": "#c1c1d6",
+        "UNK": "#f3a35c",
+        "NZL": "#e38282"
+    }
+    // Alternative colors for countries not found in color
+    var altColor = ["#aaaaaa", "#e0bbe4", "#957dad", "#d291bc", "#e59dea"];
     var pie = d3.pie().startAngle(-0.3 * Math.PI).value(d => d);
     var arc = d3.arc().innerRadius(radius * 0.85).outerRadius(radius * 0.65);
 
     // Select one of the 3 sub-areas of the stats
-    var svgStats = d3.select(idToSelect[1]).append("svg")
+    var svgStats = d3.select(subIdToSelect[0]).append("svg")
         .attr("class", "stats")
         .attr("preserveAspectRatio", "xMinYMin meet")
         .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal)
@@ -339,7 +506,10 @@ function drawDonutLocation(json) {
         .enter()
         .append("path")
         .attr("d", arc)
-        .attr("fill", (d, i) => color(i));
+        .attr("fill", function(d, i) {
+            if (color[aggregateDict[i].key] != undefined) return color[aggregateDict[i].key]
+            else return altColor[i % 5];
+        });
     svgStats.append("g").classed("labels", true);
     svgStats.append("g").classed("lines", true);
 
@@ -348,7 +518,10 @@ function drawDonutLocation(json) {
         .data(pie(data))
         .enter().append("polyline")
         .style("opacity", 1)
-        .style("stroke", (d, i) => color(i))
+        .style("stroke", function(d, i) {
+            if (color[aggregateDict[i].key] != undefined) return color[aggregateDict[i].key]
+            else return altColor[i % 5];
+        })
         .style("stroke-width", 3)
         .attr("points", function (d) {
             var pos = outerArc.centroid(d);
@@ -372,7 +545,7 @@ function drawDonutLocation(json) {
         .attr("font-weight", 700)
         .attr("fill", textColor)
         .style("font-size", ".95em")
-        .text(function (d, i) { return d.data + " - " + aggregateDict[i].key; })
+        .text(function (d, i) { return d.data + " | " + aggregateDict[i].key + " | " + percentages[i] + "%"; })
         .style("text-anchor", function (d) {
             return (midAngle(d)) < Math.PI ? "start" : "end";
         });
@@ -386,6 +559,9 @@ function drawDonutLocation(json) {
         .text("Launch location")
         .style("font-size", "1.2em")
         .style("text-anchor", "middle");
+
+    // Remove the loading using the id is the only way to avoid weird behaviors, do it in one of the subcharts is enough
+    d3.selectAll(subIdToSelect[3]).remove();
 
     // Avoid overlapping labels 
     var labels = label._groups[0],
@@ -435,21 +611,30 @@ function drawDonutLocation(json) {
     relax();
 }
 
-function drawDonutCompletedFailed(json) {
+// Draw the status donut chart
+function drawDonutCompletedFailed(json, subIdToSelect) {
     var radius = Math.min(widthStatBlock, heightStatBlock) / 2;
     // Get an array of numbers from a dynamical query to the site
     aggregateDict = statusAggregateData(json);
-    var data = [];
-    for (key in aggregateDict) data.push(aggregateDict[key].value)
-    var color = d3.scaleOrdinal()
-        .domain(data)
-        // Colors used in the donut chart
-        .range(["#a63fa1", "#ca7b49", "#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#aaaaaa"])
-    var pie = d3.pie().sort(null).value(d => d);
+    // Calculate the percentages and the values
+    var data = [],
+        valueSum = Object.keys(aggregateDict).reduce((sum,key) => sum + parseFloat(aggregateDict[key].value || 0), 0),
+        percentages = [];
+    for (key in aggregateDict) { 
+        data.push(aggregateDict[key].value);
+        percentages.push((Math.round(aggregateDict[key].value / valueSum * 1000) / 10));
+    }
+    // Since there are 3 possible values, the colors are specified manually for each value
+    var color = {
+        "uncertain": "#a63fa1",
+        "failed":  "#ca7b49",
+        "complete": "#98abc5"
+    }
+    var pie = d3.pie().startAngle(-0.3 * Math.PI).value(d => d);
     var arc = d3.arc().innerRadius(radius * 0.85).outerRadius(radius * 0.65);
 
     // Select one of the 3 sub-areas of the stats
-    var svgStats = d3.select(idToSelect[3]).append("svg")
+    var svgStats = d3.select(subIdToSelect[2]).append("svg")
         .attr("class", "stats")
         .attr("preserveAspectRatio", "xMinYMin meet")
         .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal)
@@ -464,7 +649,7 @@ function drawDonutCompletedFailed(json) {
         .enter()
         .append("path")
         .attr("d", arc)
-        .attr("fill", (d, i) => color(i));
+        .attr("fill", (d, i) => color[aggregateDict[i].key]);
     svgStats.append("g").classed("labels", true);
     svgStats.append("g").classed("lines", true);
 
@@ -473,7 +658,7 @@ function drawDonutCompletedFailed(json) {
         .data(pie(data))
         .enter().append("polyline")
         .style("opacity", 1)
-        .style("stroke", (d, i) => color(i))
+        .style("stroke", (d, i) => color[aggregateDict[i].key])
         .style("stroke-width", 3)
         .attr("points", function (d) {
             var pos = outerArc.centroid(d);
@@ -488,7 +673,7 @@ function drawDonutCompletedFailed(json) {
         .attr("font-weight", 700)
         .attr("fill", textColor)
         .style("font-size", "1.1em")
-        .text(function (d, i) { return d.data + " " + aggregateDict[i].key; })
+        .text(function (d, i) { return d.data + " " + aggregateDict[i].key + " | " + percentages[i] + "%"; })
         .attr("transform", function (d) {
             var pos = outerArc.centroid(d);
             pos[0] = radius * 1.10 * (midAngle(d) < Math.PI ? 1 : -1);
@@ -510,55 +695,82 @@ function drawDonutCompletedFailed(json) {
 }
 
 // Draw some general statistics: selected time, total launches, most active lsp
-function drawGeneralStats(json, mode, time) {
-    aggregateDict = lspAggregateData(json);
-    var data = [];
-    for (key in aggregateDict) data.push(aggregateDict[key].value);
-    var bestObj = Math.max.apply(Math, aggregateDict.map(function (o) { return o.value; }));
-    var bestLsp = aggregateDict.find(function (o) { return o.value == bestObj; });
+function drawGeneralStats(json, mode, time, subIdToSelect) {
+    aggregateDictLsp = lspAggregateData(json);
+    aggregateDictRocket = rocketTypeAggregateData(json);
+    var dataLsp = [];
+    var dataRocket = [];
+    
+    for (key in aggregateDictLsp) dataLsp.push(aggregateDictLsp[key].value);
+    var bestObjLsp = Math.max.apply(Math, aggregateDictLsp.map(function (o) { return o.value; }));
+    var bestLsp = aggregateDictLsp.find(function (o) { return o.value == bestObjLsp; });
+    
+    for (key in aggregateDictRocket) dataRocket.push(aggregateDictRocket[key].value);
+    var bestObjRocket = Math.max.apply(Math, aggregateDictRocket.map(function (o) { return o.value; }));
+    var bestRocket = aggregateDictRocket.find(function (o) { return o.value == bestObjRocket; });
 
-    var svgGeneralStats = d3.select(idToSelect[2]).append("svg")
+    var svgGeneralStats = d3.select(subIdToSelect[1]).append("svg")
         .attr("class", "stats")
         .attr("preserveAspectRatio", "xMinYMin meet")
         .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal)
 
     svgGeneralStats.append("text")
         .attr("class", "generalStatsText")
-        .attr("dy", heightStatBlockTotal / 2 - 50)
+        .attr("dy", heightStatBlockTotal / 2 - 85)
         .attr("dx", widthStatBlockTotal / 2)
         .attr("font-weight", 700)
-        .attr("fill", textColor)
-        .text(function () { return "Selected time: " + mode + " " + time; })
-        .style("font-size", "2em")
+        .attr("fill", highlightColor)
+        .text(function () { return (mode + " " + time).toUpperCase(); })
+        .style("font-size", "2.2em")
         .style("text-anchor", "middle");
 
     svgGeneralStats.append("text")
         .attr("class", "generalStatsText")
-        .attr("dy", heightStatBlockTotal / 2 - 10)
+        .attr("dy", heightStatBlockTotal / 2 - 45)
         .attr("dx", widthStatBlockTotal / 2)
         .attr("font-weight", 700)
         .attr("fill", textColor)
-        .text(function () { return "Total launches: " + data.reduce((a, b) => a + b, 0); })
+        .text(function () { return "Total launches: " + dataLsp.reduce((a, b) => a + b, 0); })
         .style("font-size", "1.6em")
         .style("text-anchor", "middle");
 
     svgGeneralStats.append("text")
         .attr("class", "generalStatsText")
-        .attr("dy", heightStatBlockTotal / 2 + 50)
+        .attr("dy", heightStatBlockTotal / 2 + 5)
         .attr("dx", widthStatBlockTotal / 2)
         .attr("font-weight", 700)
         .attr("fill", textColor)
-        .text(function () { return "Best LSP: " + bestLsp.key })
+        .text(function () { return "Best LSP: " + bestLsp.key.substring(4,); })
         .style("font-size", "1.2em")
         .style("text-anchor", "middle");
 
     svgGeneralStats.append("text")
         .attr("class", "generalStatsText")
-        .attr("dy", heightStatBlockTotal / 2 + 80)
+        .attr("dy", heightStatBlockTotal / 2 + 35)
         .attr("dx", widthStatBlockTotal / 2)
         .attr("font-weight", 700)
         .attr("fill", textColor)
-        .text(function () { return "with " + bestLsp.value + " launches completed"; })
+        .text(function () { return "from " + bestLsp.key.substring(0,3) + " with " + bestLsp.value + " scheduled launches"; })
+        .style("font-size", "1.2em")
+        .style("text-anchor", "middle");
+
+    svgGeneralStats.append("text")
+        .attr("class", "generalStatsText")
+        .attr("dy", heightStatBlockTotal / 2 + 85)
+        .attr("dx", widthStatBlockTotal / 2)
+        .attr("font-weight", 700)
+        .attr("fill", textColor)
+        .text(function () { return "Most used rocket family: " + bestRocket.key; })
+        .style("font-size", "1.2em")
+        .style("text-anchor", "middle");
+    
+    svgGeneralStats.append("text")
+        .attr("class", "generalStatsText")
+        .attr("dy", heightStatBlockTotal / 2 + 110)
+        .attr("dx", widthStatBlockTotal / 2)
+        .attr("font-weight", 700)
+        .attr("fill", textColor)
+        .text(function () { return "with " + bestRocket.value + " rockets launched"; })
         .style("font-size", "1.2em")
         .style("text-anchor", "middle");
 }
@@ -567,41 +779,19 @@ function midAngle(d) { return d.startAngle + (d.endAngle - d.startAngle) / 2; }
 
 // Action to take on mouse click
 function barClick() {
-    // Disable the click while processing
-    d3.selectAll(".bar").on("click", null);
+    // Disable the click on the already selected years/decades
+    d3.select(this)
+        .transition("removeStroke")
+        .duration(1000)
+        .style("stroke-width", 0);
 
-    var svgLoading = d3.select(idToSelect[2]).append("svg")
-        .attr("class", "loading")
-        .attr("preserveAspectRatio", "xMinYMin meet")
-        .attr("viewBox", "0 0 " + widthStatBlockTotal + " " + heightStatBlockTotal);
+    d3.select(this)
+        .on("click", null)
+        .on("mouseover", null)
+        .on("mouseout", null);
 
-    // A loading text
-    svgLoading.append("text")
-        .attr("id", "loadingtext")
-        .attr("x", function (d) { return widthStatBlockTotal / 2; })
-        .attr("y", function (d) { return heightStatBlockTotal / 2 - 50; })
-        .style("text-anchor", "middle")
-        .attr("fill", textColor)
-        .attr("opacity", 1)
-        .attr("font-size", "2em")
-        .text(loadingText);
-
-    // A loading spinner
-    var radius = spinnerRadius;
-    var tau = 2 * Math.PI;
-    var arc = d3.arc()
-        .innerRadius(radius * 0.45)
-        .outerRadius(radius * 0.55)
-        .startAngle(0);
-    var spinner = svgLoading.append("g")
-        .attr("transform", "translate(" + widthStatBlockTotal / 2 + "," + (heightStatBlockTotal / 2) + ")")
-        .attr("id", "spinner")
-        .attr("opacity", 0.9)
-    var background = spinner.append("path")
-        .datum({ endAngle: 0.75 * tau })
-        .style("fill", textColor)
-        .attr("d", arc)
-        .call(spin, 1500)
+    // Delete the stats placeholder
+    d3.select("#statsPlaceholder").remove();
 
     var modes = document.getElementById("modes")
     var mode;
@@ -613,32 +803,35 @@ function barClick() {
 
     d3.select(this).transition("blink")
         .duration(500)
-        .style("opacity", 0.5);
+        .style("opacity", 0.5)
 }
 
-// Change the stroke on hover, change it back to normal on mouse out
+// Change the stroke on hover
 function barMouseover() {
     d3.select(this).transition("hoverBar")
         .duration(300)
         .style("stroke", highlightColor)
-        .style("stroke-width", 10)
+        .style("stroke-width", 10);
 }
 
+// Restore the previous stroke on mouseout
 function barMouseout() {
     d3.select(this).transition("outBar")
         .duration(300)
-        .style("stroke-width", 0)
+        .style("stroke-width", 0);
 }
 
+// Move the text in the donuts to highlight it
 function donutMouseover() {
     d3.selectAll(".centerText").transition("modeDown")
-        .duration(500)
-        .attr("dy", 10)
+        .duration(300)
+        .attr("dy", 5)
         .transition("moveUp")
-        .duration(200)
-        .attr("dy", 0)
+        .duration(100)
+        .attr("dy", 0);
 }
 
+// Store the data in a global variable
 function storeData(data) {
     storedData = data;
 
@@ -647,17 +840,11 @@ function storeData(data) {
     drawChartAggregate(yearlyAggregatedData, "year");
 }
 
-var dataDim = d3.select("#modes");
-dataDim.on("change", updateData);
-
 // Update the data when the user selects a different radio button
 function updateData() {
     // Clean from any previous visualization
     d3.selectAll(".bar").remove();
     d3.selectAll(".axis").remove();
-    d3.selectAll(".stats").remove();
-    d3.select(".loading").remove();
-    d3.selectAll("g").remove();
 
     var modes = document.getElementById("modes");
     var mode;
@@ -672,4 +859,8 @@ function updateData() {
         yearlyAggregatedData = yearlyAggregateData(storedData);
         drawChartAggregate(yearlyAggregatedData, mode);
     }
+    resetStats();
 }
+
+// * * * * * * * EXECUTE TARAZED * * * * * * *
+tarazed();
