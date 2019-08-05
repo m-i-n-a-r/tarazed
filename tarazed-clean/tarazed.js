@@ -313,6 +313,9 @@ function drawChartAggregate(data, mode) {
 
 // Delete every visualized year/decade
 function resetStats() {
+    // Don't execute when there's nothing to reset
+    if (d3.select(".stats").empty()) return;
+
     d3.selectAll(".bar").on("click", null);
     var n = 0;
     drawedStats = 0;
