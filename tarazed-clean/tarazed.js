@@ -143,7 +143,12 @@ function createStatsPlaceholder() {
         .attr("fill", textColor)
         .attr("font-weight", 700)
         .attr("font-size", "2em")
-        .text("Select a bar to see its details");
+        .attr("opacity", 0)
+        .text("Select a bar to see its details")
+        .transition()
+        .duration(600)
+        .attr("opacity", 1)
+        .on("end", function() { d3.selectAll(".bar").on("click", barClick); });
 }
 
 // Given its data, display the next launch
@@ -264,7 +269,7 @@ function drawChartAggregate(data, mode) {
         .transition("bar spawning")
         .duration(250)
         .delay(function (d, i) { 
-            if(mode === "year") return i * 30;
+            if(mode === "year") return i * 20;
             if(mode === "decade") return i * 100
             else return i * 50; 
         })
@@ -308,37 +313,48 @@ function drawChartAggregate(data, mode) {
 
 // Delete every visualized year/decade
 function resetStats() {
+    d3.selectAll(".bar").on("click", null);
+    var n = 0;
     drawedStats = 0;
+
+    // Workaround to execute the end callback a single time
     d3.selectAll(".stats")
+        .each(function() { n++; })
         .transition("removeStats")
-        .duration(1500)
+        .duration(1000)
         .delay(function (d, i) { return (i / 3 * 100); })
         .attr("transform", "translate(" + widthTotal + ")")
-        .on("end", function() {
-            // Remove the generated divs
-            var statsCointainer = document.getElementById("statsList");
-            while (statsCointainer.firstChild) statsCointainer.removeChild(statsCointainer.firstChild);
-            // Show the stats placeholder
-            document.getElementById("statsPlaceholder").style.display = "block";
-        });
+        .on('end', function() {
+            n--;
+            if (!n) endall();
+        })
+     
+    function endall() {
+        // Remove the generated divs
+        var statsCointainer = document.getElementById("statsList");
+        while (statsCointainer.firstChild) statsCointainer.removeChild(statsCointainer.firstChild);
+        // Recreate the stats placeholder
+        createStatsPlaceholder();
+        // Reset interactions
+        d3.selectAll(".bar")
+            //.on("click", barClick) Used if statsPlaceholder is removed
+            .on("mouseover", barMouseover)
+            .on("mouseout", barMouseout)
+            .transition("deblink")
+            .duration(700)
+            .style("opacity", 1);
+    }
     
     // Autoscroll the page up (can be removed for bigger pages)
     const scrollToTop = () => {
         const c = document.documentElement.scrollTop || document.body.scrollTop;
         if (c > 0) {
           window.requestAnimationFrame(scrollToTop);
-          window.scrollTo(0, c - c / 12);
+          window.scrollTo(0, c - c / 16);
         }
       };
     scrollToTop();
 
-    d3.selectAll(".bar")
-        .on("click", barClick)
-        .on("mouseover", barMouseover)
-        .on("mouseout", barMouseout)
-        .transition("deblink")
-        .duration(800)
-        .style("opacity", 1.0);
 }
 
 // Draw some stats and subplots for the chosen bar
@@ -705,8 +721,8 @@ function barClick() {
         .on("mouseover", null)
         .on("mouseout", null);
 
-    // Hide the stats placeholder
-    document.getElementById("statsPlaceholder").style.display = "none";
+    // Delete the stats placeholder
+    d3.select("#statsPlaceholder").remove();
 
     // Useful to draw only the right number of stats 
     drawedStats++;
@@ -764,7 +780,6 @@ function updateData() {
     // Clean from any previous visualization
     d3.selectAll(".bar").remove();
     d3.selectAll(".axis").remove();
-    resetStats();
 
     var modes = document.getElementById("modes");
     var mode;
@@ -779,6 +794,7 @@ function updateData() {
         yearlyAggregatedData = yearlyAggregateData(storedData);
         drawChartAggregate(yearlyAggregatedData, mode);
     }
+    resetStats();
 }
 
 // * * * * * * * EXECUTE TARAZED * * * * * * *
